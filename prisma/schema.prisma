@@ -1,0 +1,139 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+datasource db {
+  provider = "postgresql" // o mysql, sqlite, etc.
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ----------------------------------------------------
+// ENUMS
+// ----------------------------------------------------
+
+enum CashRegisterStatus {
+  OPEN
+  CLOSED
+}
+
+enum CashInOutType {
+  IN
+  OUT
+}
+
+enum UserRole {
+  ADMIN
+  CASHIER
+}
+
+// ----------------------------------------------------
+// USER & EMPLOYEE MODELS
+// ----------------------------------------------------
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  role      UserRole @default(CASHIER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones de auditoría (quién abrió y quién cerró la caja)
+  openings  Opening[]
+  closings  Closing[]
+}
+
+model Employee {
+  id           Int                 @id @default(autoincrement())
+  name         String
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  // Relación con transacciones
+  transactions TransactionRecord[]
+}
+
+// ----------------------------------------------------
+// CASH REGISTER MODELS
+// ----------------------------------------------------
+
+model CashRegisterRecord {
+  id           Int                 @id @default(autoincrement())
+  status       CashRegisterStatus  @default(OPEN)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  // 1-to-1 Relations
+  opening      Opening?
+  closing      Closing?
+
+  // 1-to-N Relations
+  transactions TransactionRecord[]
+  cashInOut    CashInOutRecord[]
+}
+
+model Opening {
+  id                   Int                @id @default(autoincrement())
+  date                 DateTime           @default(now())
+  cash                 Float
+  note                 String?
+  denominations        Json               // Structure: [{ value: number, quantity: number }]
+
+  // Foreign Key for CashRegisterRecord (1-to-1)
+  cashRegisterRecordId Int                @unique
+  cashRegisterRecord   CashRegisterRecord @relation(fields: [cashRegisterRecordId], references: [id], onDelete: Cascade)
+
+  // Relación con el Usuario que realiza la apertura
+  userId               Int
+  user                 User               @relation(fields: [userId], references: [id])
+}
+
+model Closing {
+  id                   Int                @id @default(autoincrement())
+  date                 DateTime           @default(now())
+  cashProvided         Float
+  difference           Float
+  note                 String?
+  denominations        Json               // Structure: [{ value: number, quantity: number }]
+
+  // Foreign Key for CashRegisterRecord (1-to-1)
+  cashRegisterRecordId Int                @unique
+  cashRegisterRecord   CashRegisterRecord @relation(fields: [cashRegisterRecordId], references: [id], onDelete: Cascade)
+
+  // Relación con el Usuario que realiza el cierre
+  userId               Int
+  user                 User               @relation(fields: [userId], references: [id])
+}
+
+model CashInOutRecord {
+  id                   Int                @id @default(autoincrement())
+  type                 CashInOutType
+  amount               Float
+  reason               String
+  date                 DateTime           @default(now())
+  note                 String?
+
+  cashRegisterRecordId Int
+  cashRegisterRecord   CashRegisterRecord @relation(fields: [cashRegisterRecordId], references: [id], onDelete: Cascade)
+}
+
+model TransactionRecord {
+  id                   Int                @id @default(autoincrement())
+  date                 DateTime           @default(now())
+  amountToCharge       Float
+  cashProvided         Float
+  changeReturned       Float
+  note                 String?
+  denominations        Json               // Structure: [{ value: number, quantity: number }]
+
+  // Relación con CashRegisterRecord
+  cashRegisterRecordId Int
+  cashRegisterRecord   CashRegisterRecord @relation(fields: [cashRegisterRecordId], references: [id], onDelete: Cascade)
+
+  // Relación con Employee
+  employeeId           Int
+  employee             Employee           @relation(fields: [employeeId], references: [id])
+}
