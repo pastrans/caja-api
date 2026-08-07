@@ -1,7 +1,8 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import {
   CreateEmployee,
   CreateEmployeeDto,
+  CustomError,
   DeleteEmployee,
   EmployeeRepository,
   GetEmployee,
@@ -13,49 +14,53 @@ import {
 export class EmployeesController {
   constructor(private readonly employeeRepository: EmployeeRepository) {}
 
-  public getEmployees = (req: Request, res: Response) => {
+  public getEmployees = (req: Request, res: Response, next: NextFunction) => {
     new GetEmployees(this.employeeRepository)
       .execute()
       .then((employees) => res.json(employees))
-      .catch((error) => res.status(400).json({ error }));
+      .catch(next);
   };
 
-  public getEmployeeById = (req: Request, res: Response) => {
+  public getEmployeeById = (req: Request, res: Response, next: NextFunction) => {
     const id = +req.params.id!;
+    if (isNaN(id)) return next(CustomError.badRequest('Invalid ID format'));
 
     new GetEmployee(this.employeeRepository)
       .execute(id)
       .then((employee) => res.json(employee))
-      .catch((error) => res.status(400).json({ error }));
+      .catch(next);
   };
 
-  public createEmployee = (req: Request, res: Response) => {
+  public createEmployee = (req: Request, res: Response, next: NextFunction) => {
     const [error, createEmployeeDto] = CreateEmployeeDto.create(req.body);
-    if (error) return res.status(400).json({ error });
+    if (error) return next(CustomError.badRequest(error));
 
     new CreateEmployee(this.employeeRepository)
       .execute(createEmployeeDto!)
       .then((employee) => res.json(employee))
-      .catch((error) => res.status(400).json({ error }));
+      .catch(next);
   };
 
-  public updateEmployee = (req: Request, res: Response) => {
+  public updateEmployee = (req: Request, res: Response, next: NextFunction) => {
     const id = +req.params.id!;
+    if (isNaN(id)) return next(CustomError.badRequest('Invalid ID format'));
+
     const [error, updateEmployeeDto] = UpdateEmployeeDto.create({ ...req.body, id });
-    if (error) return res.status(400).json({ error });
+    if (error) return next(CustomError.badRequest(error));
 
     new UpdateEmployee(this.employeeRepository)
       .execute(updateEmployeeDto!)
       .then((employee) => res.json(employee))
-      .catch((error) => res.status(400).json({ error }));
+      .catch(next);
   };
 
-  public deleteEmployee = (req: Request, res: Response) => {
+  public deleteEmployee = (req: Request, res: Response, next: NextFunction) => {
     const id = +req.params.id!;
+    if (isNaN(id)) return next(CustomError.badRequest('Invalid ID format'));
 
     new DeleteEmployee(this.employeeRepository)
       .execute(id)
       .then((employee) => res.json(employee))
-      .catch((error) => res.status(400).json({ error }));
+      .catch(next);
   };
 }

@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import {
   CashRegisterRecordRepository,
   CloseCashRegister,
@@ -7,6 +7,7 @@ import {
   CreateCashInOutDto,
   CreateTransaction,
   CreateTransactionDto,
+  CustomError,
   GetActiveCashRegister,
   GetCashRegister,
   GetCashRegisters,
@@ -17,66 +18,67 @@ import {
 export class CashRegistersController {
   constructor(private readonly cashRegisterRepository: CashRegisterRecordRepository) {}
 
-  public openCashRegister = (req: Request, res: Response) => {
+  public openCashRegister = (req: Request, res: Response, next: NextFunction) => {
     const [error, openDto] = OpenCashRegisterDto.create(req.body);
-    if (error) return res.status(400).json({ error });
+    if (error) return next(CustomError.badRequest(error));
 
     new OpenCashRegister(this.cashRegisterRepository)
       .execute(openDto!)
       .then((record) => res.json(record))
-      .catch((error) => res.status(400).json({ error }));
+      .catch(next);
   };
 
-  public closeCashRegister = (req: Request, res: Response) => {
+  public closeCashRegister = (req: Request, res: Response, next: NextFunction) => {
     const [error, closeDto] = CloseCashRegisterDto.create(req.body);
-    if (error) return res.status(400).json({ error });
+    if (error) return next(CustomError.badRequest(error));
 
     new CloseCashRegister(this.cashRegisterRepository)
       .execute(closeDto!)
       .then((record) => res.json(record))
-      .catch((error) => res.status(400).json({ error }));
+      .catch(next);
   };
 
-  public getActiveCashRegister = (req: Request, res: Response) => {
+  public getActiveCashRegister = (req: Request, res: Response, next: NextFunction) => {
     new GetActiveCashRegister(this.cashRegisterRepository)
       .execute()
       .then((record) => res.json(record))
-      .catch((error) => res.status(400).json({ error }));
+      .catch(next);
   };
 
-  public getCashRegisters = (req: Request, res: Response) => {
+  public getCashRegisters = (req: Request, res: Response, next: NextFunction) => {
     new GetCashRegisters(this.cashRegisterRepository)
       .execute()
       .then((records) => res.json(records))
-      .catch((error) => res.status(400).json({ error }));
+      .catch(next);
   };
 
-  public getCashRegisterById = (req: Request, res: Response) => {
+  public getCashRegisterById = (req: Request, res: Response, next: NextFunction) => {
     const id = +req.params.id!;
+    if (isNaN(id)) return next(CustomError.badRequest('Invalid ID format'));
 
     new GetCashRegister(this.cashRegisterRepository)
       .execute(id)
       .then((record) => res.json(record))
-      .catch((error) => res.status(400).json({ error }));
+      .catch(next);
   };
 
-  public createTransaction = (req: Request, res: Response) => {
+  public createTransaction = (req: Request, res: Response, next: NextFunction) => {
     const [error, transactionDto] = CreateTransactionDto.create(req.body);
-    if (error) return res.status(400).json({ error });
+    if (error) return next(CustomError.badRequest(error));
 
     new CreateTransaction(this.cashRegisterRepository)
       .execute(transactionDto!)
       .then((transaction) => res.json(transaction))
-      .catch((error) => res.status(400).json({ error }));
+      .catch(next);
   };
 
-  public createCashInOut = (req: Request, res: Response) => {
+  public createCashInOut = (req: Request, res: Response, next: NextFunction) => {
     const [error, cashInOutDto] = CreateCashInOutDto.create(req.body);
-    if (error) return res.status(400).json({ error });
+    if (error) return next(CustomError.badRequest(error));
 
     new CreateCashInOut(this.cashRegisterRepository)
       .execute(cashInOutDto!)
       .then((movement) => res.json(movement))
-      .catch((error) => res.status(400).json({ error }));
+      .catch(next);
   };
 }

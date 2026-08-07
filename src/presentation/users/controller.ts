@@ -1,7 +1,8 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import {
   CreateUser,
   CreateUserDto,
+  CustomError,
   DeleteUser,
   GetUser,
   GetUsers,
@@ -13,49 +14,53 @@ import {
 export class UsersController {
   constructor(private readonly userRepository: UserRepository) {}
 
-  public getUsers = (req: Request, res: Response) => {
+  public getUsers = (req: Request, res: Response, next: NextFunction) => {
     new GetUsers(this.userRepository)
       .execute()
       .then((users) => res.json(users))
-      .catch((error) => res.status(400).json({ error }));
+      .catch(next);
   };
 
-  public getUserById = (req: Request, res: Response) => {
+  public getUserById = (req: Request, res: Response, next: NextFunction) => {
     const id = +req.params.id!;
+    if (isNaN(id)) return next(CustomError.badRequest('Invalid ID format'));
 
     new GetUser(this.userRepository)
       .execute(id)
       .then((user) => res.json(user))
-      .catch((error) => res.status(400).json({ error }));
+      .catch(next);
   };
 
-  public createUser = (req: Request, res: Response) => {
+  public createUser = (req: Request, res: Response, next: NextFunction) => {
     const [error, createUserDto] = CreateUserDto.create(req.body);
-    if (error) return res.status(400).json({ error });
+    if (error) return next(CustomError.badRequest(error));
 
     new CreateUser(this.userRepository)
       .execute(createUserDto!)
       .then((user) => res.json(user))
-      .catch((error) => res.status(400).json({ error }));
+      .catch(next);
   };
 
-  public updateUser = (req: Request, res: Response) => {
+  public updateUser = (req: Request, res: Response, next: NextFunction) => {
     const id = +req.params.id!;
+    if (isNaN(id)) return next(CustomError.badRequest('Invalid ID format'));
+
     const [error, updateUserDto] = UpdateUserDto.create({ ...req.body, id });
-    if (error) return res.status(400).json({ error });
+    if (error) return next(CustomError.badRequest(error));
 
     new UpdateUser(this.userRepository)
       .execute(updateUserDto!)
       .then((user) => res.json(user))
-      .catch((error) => res.status(400).json({ error }));
+      .catch(next);
   };
 
-  public deleteUser = (req: Request, res: Response) => {
+  public deleteUser = (req: Request, res: Response, next: NextFunction) => {
     const id = +req.params.id!;
+    if (isNaN(id)) return next(CustomError.badRequest('Invalid ID format'));
 
     new DeleteUser(this.userRepository)
       .execute(id)
       .then((user) => res.json(user))
-      .catch((error) => res.status(400).json({ error }));
+      .catch(next);
   };
 }
