@@ -1,3 +1,5 @@
+import { bcryptAdapter } from "../../../config";
+
 export class CreateUserDto {
   private constructor(
     public readonly name: string,
@@ -14,11 +16,12 @@ export class CreateUserDto {
     if (!password) return ['Password is required', undefined];
     if (password.length < 6)
       return ['Password must be at least 6 characters', undefined];
+    
+    let pass = bcryptAdapter.hash(password);
 
     if (role && role !== 'ADMIN' && role !== 'CASHIER') {
       return ['Role must be either ADMIN or CASHIER', undefined];
     }
-
-    return [undefined, new CreateUserDto(name, email, password, role)];
+    return [undefined, new CreateUserDto(name, email, pass , role)];
   }
 }
