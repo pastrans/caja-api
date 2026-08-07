@@ -22,3 +22,8 @@ export * from './cash-register/get-cash-register.use-case';
 export * from './cash-register/get-cash-registers.use-case';
 export * from './cash-register/create-transaction.use-case';
 export * from './cash-register/create-cash-in-out.use-case';
+
+// Auth use cases
+export * from './auth/login-user.use-case';
+export * from './auth/forgot-password.use-case';    
+export * from './auth/reset-password.use-case';

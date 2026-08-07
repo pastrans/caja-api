@@ -11,3 +11,6 @@ export * from './employee/update-employee.dto';
 
 export * from './cash-register/create-cash-in-out.dto';    
 export * from './cash-register/create-transaction.dto';
+
+export * from './auth/login-user.dto';
+export * from './auth/reset-password.dto';
