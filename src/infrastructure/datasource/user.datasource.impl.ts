@@ -4,11 +4,17 @@ import {
   UserEntity,
   CreateUserDto,
   UpdateUserDto,
+  CustomError,
 } from '../../domain';
 
 export class UserDatasourceImpl implements UserDatasource {
   async create(createUserDto: CreateUserDto): Promise<UserEntity> {
     const { name, email, password, role } = createUserDto;
+    
+    // Opcional: verificar si el correo ya existe antes de crear
+    const existingUser = await this.findByEmail(email);
+    if (existingUser) throw CustomError.badRequest('User with this email already exists');
+
     const user = await prisma.user.create({
       data: {
         name,
@@ -17,6 +23,7 @@ export class UserDatasourceImpl implements UserDatasource {
         ...(role && { role }),
       },
     });
+
     return UserEntity.fromObject(user);
   }
 
@@ -27,13 +34,15 @@ export class UserDatasourceImpl implements UserDatasource {
 
   async findById(id: number): Promise<UserEntity> {
     const user = await prisma.user.findUnique({ where: { id } });
-    if (!user) throw `User with id ${id} not found`;
+    if (!user) throw CustomError.notFound(`User with id ${id} not found`);
+
     return UserEntity.fromObject(user);
   }
 
   async findByEmail(email: string): Promise<UserEntity | null> {
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) return null;
+
     return UserEntity.fromObject(user);
   }
 
@@ -50,6 +59,7 @@ export class UserDatasourceImpl implements UserDatasource {
 
   async deleteById(id: number): Promise<UserEntity> {
     await this.findById(id);
+
     const deleted = await prisma.user.delete({ where: { id } });
     return UserEntity.fromObject(deleted);
   }

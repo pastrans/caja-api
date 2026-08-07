@@ -4,6 +4,7 @@ import {
   EmployeeEntity,
   CreateEmployeeDto,
   UpdateEmployeeDto,
+  CustomError,
 } from '../../domain';
 
 export class EmployeeDatasourceImpl implements EmployeeDatasource {
@@ -21,7 +22,8 @@ export class EmployeeDatasourceImpl implements EmployeeDatasource {
 
   async findById(id: number): Promise<EmployeeEntity> {
     const employee = await prisma.employee.findUnique({ where: { id } });
-    if (!employee) throw `Employee with id ${id} not found`;
+    if (!employee) throw CustomError.notFound(`Employee with id ${id} not found`);
+    
     return EmployeeEntity.fromObject(employee);
   }
 
@@ -38,6 +40,7 @@ export class EmployeeDatasourceImpl implements EmployeeDatasource {
 
   async deleteById(id: number): Promise<EmployeeEntity> {
     await this.findById(id);
+
     const deleted = await prisma.employee.delete({ where: { id } });
     return EmployeeEntity.fromObject(deleted);
   }
