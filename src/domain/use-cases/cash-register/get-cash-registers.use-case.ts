@@ -1,14 +1,27 @@
+import { PaginationDto } from '../../dtos';
 import { CashRegisterRecordEntity } from '../../entities';
 import { CashRegisterRecordRepository } from '../../repositories';
+import { PaginatedResponse } from '../../interfaces/paginated-response.interface';
+import { PaginationHelper } from '../../helpers/pagination.helper';
 
 export interface GetCashRegistersUseCase {
-  execute(): Promise<CashRegisterRecordEntity[]>;
+  execute(paginationDto: PaginationDto): Promise<PaginatedResponse<CashRegisterRecordEntity>>;
 }
 
 export class GetCashRegisters implements GetCashRegistersUseCase {
-  constructor(private readonly repository: CashRegisterRecordRepository) {}
+  constructor(
+    private readonly repository: CashRegisterRecordRepository,
+    private readonly path: string = '/api/cash-registers'
+  ) {}
 
-  execute(): Promise<CashRegisterRecordEntity[]> {
-    return this.repository.getAll();
+  async execute(paginationDto: PaginationDto): Promise<PaginatedResponse<CashRegisterRecordEntity>> {
+    const { records, total } = await this.repository.getAll(paginationDto);
+
+    return PaginationHelper.createResponse<CashRegisterRecordEntity>(
+      records,
+      total,
+      paginationDto,
+      this.path
+    );
   }
 }

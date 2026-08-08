@@ -9,6 +9,8 @@ import {
   CreateTransactionDto,
   CreateCashInOutDto,
   CustomError,
+  PaginationDto,
+  CashRegisterPaginatedResult,
 } from '../../domain';
 
 export class CashRegisterRecordDatasourceImpl implements CashRegisterRecordDatasource {
@@ -85,13 +87,23 @@ export class CashRegisterRecordDatasourceImpl implements CashRegisterRecordDatas
     return CashRegisterRecordEntity.fromObject(record);
   }
 
-  async getAll(): Promise<CashRegisterRecordEntity[]> {
-    const records = await prisma.cashRegisterRecord.findMany({
-      include: this.includeQuery,
-      orderBy: { createdAt: 'desc' },
-    });
+  async getAll(paginationDto: PaginationDto): Promise<CashRegisterPaginatedResult> {
+    const { page, limit } = paginationDto;
 
-    return records.map(CashRegisterRecordEntity.fromObject);
+    const [total, records] = await Promise.all([
+      prisma.cashRegisterRecord.count(),
+      prisma.cashRegisterRecord.findMany({
+        skip: (page - 1) * limit,
+        take: limit,
+        include: this.includeQuery,
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
+
+    return {
+      total,
+      records: records.map(CashRegisterRecordEntity.fromObject),
+    };
   }
 
   async createTransaction(dto: CreateTransactionDto): Promise<TransactionRecordEntity> {

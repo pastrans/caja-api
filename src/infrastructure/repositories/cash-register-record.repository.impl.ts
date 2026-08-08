@@ -8,6 +8,8 @@ import {
   CloseCashRegisterDto,
   CreateTransactionDto,
   CreateCashInOutDto,
+  PaginationDto,
+  CashRegisterPaginatedResult,
 } from '../../domain';
 
 export class CashRegisterRecordRepositoryImpl implements CashRegisterRecordRepository {
@@ -29,8 +31,8 @@ export class CashRegisterRecordRepositoryImpl implements CashRegisterRecordRepos
     return this.datasource.findById(id);
   }
 
-  getAll(): Promise<CashRegisterRecordEntity[]> {
-    return this.datasource.getAll();
+  getAll(paginationDto: PaginationDto): Promise<CashRegisterPaginatedResult> {
+    return this.datasource.getAll(paginationDto);
   }
 
   createTransaction(dto: CreateTransactionDto): Promise<TransactionRecordEntity> {

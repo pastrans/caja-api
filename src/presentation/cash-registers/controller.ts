@@ -13,6 +13,7 @@ import {
   GetCashRegisters,
   OpenCashRegister,
   OpenCashRegisterDto,
+  PaginationDto,
 } from '../../domain';
 
 export class CashRegistersController {
@@ -46,8 +47,13 @@ export class CashRegistersController {
   };
 
   public getCashRegisters = (req: Request, res: Response, next: NextFunction) => {
-    new GetCashRegisters(this.cashRegisterRepository)
-      .execute()
+    const { page, limit } = req.query;
+
+    const [error, paginationDto] = PaginationDto.create({ page, limit });
+    if (error) return next(CustomError.badRequest(error));
+
+    new GetCashRegisters(this.cashRegisterRepository, req.baseUrl)
+      .execute(paginationDto!)
       .then((records) => res.json(records))
       .catch(next);
   };

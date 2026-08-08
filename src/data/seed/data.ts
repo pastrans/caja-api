@@ -67,6 +67,171 @@ export const seedData = {
           "quantity": 2
         }],
       "note": "this is a opening note"
+    },
+    {
+      "cash": 21.10,
+      "userSequenceArray": 1,           // this is a the postion in user array
+      "denominations": [{
+          "value": 1,
+          "quantity": 1
+        }, 
+        {"value": 10,
+          "quantity": 2
+        }, 
+        {"value": 0.10,
+          "quantity": 2
+        }],
+      "note": "this is a opening note"
+    },
+    {
+      "cash": 21.10,
+      "userSequenceArray": 1,           // this is a the postion in user array
+      "denominations": [{
+          "value": 1,
+          "quantity": 1
+        }, 
+        {"value": 10,
+          "quantity": 2
+        }, 
+        {"value": 0.10,
+          "quantity": 2
+        }],
+      "note": "this is a opening note"
+    },
+    {
+      "cash": 21.10,
+      "userSequenceArray": 1,           // this is a the postion in user array
+      "denominations": [{
+          "value": 1,
+          "quantity": 1
+        }, 
+        {"value": 10,
+          "quantity": 2
+        }, 
+        {"value": 0.10,
+          "quantity": 2
+        }],
+      "note": "this is a opening note"
+    },
+    {
+      "cash": 21.10,
+      "userSequenceArray": 1,           // this is a the postion in user array
+      "denominations": [{
+          "value": 1,
+          "quantity": 1
+        }, 
+        {"value": 10,
+          "quantity": 2
+        }, 
+        {"value": 0.10,
+          "quantity": 2
+        }],
+      "note": "this is a opening note"
+    },
+    {
+      "cash": 21.10,
+      "userSequenceArray": 1,           // this is a the postion in user array
+      "denominations": [{
+          "value": 1,
+          "quantity": 1
+        }, 
+        {"value": 10,
+          "quantity": 2
+        }, 
+        {"value": 0.10,
+          "quantity": 2
+        }],
+      "note": "this is a opening note"
+    },
+    {
+      "cash": 21.10,
+      "userSequenceArray": 1,           // this is a the postion in user array
+      "denominations": [{
+          "value": 1,
+          "quantity": 1
+        }, 
+        {"value": 10,
+          "quantity": 2
+        }, 
+        {"value": 0.10,
+          "quantity": 2
+        }],
+      "note": "this is a opening note"
+    },
+    {
+      "cash": 21.10,
+      "userSequenceArray": 1,           // this is a the postion in user array
+      "denominations": [{
+          "value": 1,
+          "quantity": 1
+        }, 
+        {"value": 10,
+          "quantity": 2
+        }, 
+        {"value": 0.10,
+          "quantity": 2
+        }],
+      "note": "this is a opening note"
+    },
+    {
+      "cash": 21.10,
+      "userSequenceArray": 1,           // this is a the postion in user array
+      "denominations": [{
+          "value": 1,
+          "quantity": 1
+        }, 
+        {"value": 10,
+          "quantity": 2
+        }, 
+        {"value": 0.10,
+          "quantity": 2
+        }],
+      "note": "this is a opening note"
+    },
+    {
+      "cash": 21.10,
+      "userSequenceArray": 1,           // this is a the postion in user array
+      "denominations": [{
+          "value": 1,
+          "quantity": 1
+        }, 
+        {"value": 10,
+          "quantity": 2
+        }, 
+        {"value": 0.10,
+          "quantity": 2
+        }],
+      "note": "this is a opening note"
+    },
+    {
+      "cash": 21.10,
+      "userSequenceArray": 1,           // this is a the postion in user array
+      "denominations": [{
+          "value": 1,
+          "quantity": 1
+        }, 
+        {"value": 10,
+          "quantity": 2
+        }, 
+        {"value": 0.10,
+          "quantity": 2
+        }],
+      "note": "this is a opening note"
+    },
+    {
+      "cash": 21.10,
+      "userSequenceArray": 1,           // this is a the postion in user array
+      "denominations": [{
+          "value": 1,
+          "quantity": 1
+        }, 
+        {"value": 10,
+          "quantity": 2
+        }, 
+        {"value": 0.10,
+          "quantity": 2
+        }],
+      "note": "this is a opening note"
     }
   ],
 
@@ -145,6 +310,188 @@ export const seedData = {
       "cash": 72.85,
       "difference": 0,
       "cashRegisterRecordSequenceArray": 2,        // this is a the postion in cashRegister array
+      "userSequenceArray": 2,                                 // this is a the postion in user array
+      "denominations": [
+        {
+          "value": 50,
+          "quantity": 1
+        },
+        {
+          "value": 20,
+          "quantity": 1
+        },
+        {
+          "value": 25,
+          "quantity": 3
+        },
+        {
+          "value": 10,
+          "quantity": 1
+        },
+      ],
+      "note": "this is a opening note"
+    },
+    {
+    "cashProvided": 72.85,
+      "cash": 72.85,
+      "difference": 0,
+      "cashRegisterRecordSequenceArray": 3,        // this is a the postion in cashRegister array
+      "userSequenceArray": 2,                                 // this is a the postion in user array
+      "denominations": [
+        {
+          "value": 50,
+          "quantity": 1
+        },
+        {
+          "value": 20,
+          "quantity": 1
+        },
+        {
+          "value": 25,
+          "quantity": 3
+        },
+        {
+          "value": 10,
+          "quantity": 1
+        },
+      ],
+      "note": "this is a opening note"
+    },
+    {
+    "cashProvided": 72.85,
+      "cash": 72.85,
+      "difference": 0,
+      "cashRegisterRecordSequenceArray": 4,        // this is a the postion in cashRegister array
+      "userSequenceArray": 2,                                 // this is a the postion in user array
+      "denominations": [
+        {
+          "value": 50,
+          "quantity": 1
+        },
+        {
+          "value": 20,
+          "quantity": 1
+        },
+        {
+          "value": 25,
+          "quantity": 3
+        },
+        {
+          "value": 10,
+          "quantity": 1
+        },
+      ],
+      "note": "this is a opening note"
+    },
+    {
+    "cashProvided": 72.85,
+      "cash": 72.85,
+      "difference": 0,
+      "cashRegisterRecordSequenceArray": 5,        // this is a the postion in cashRegister array
+      "userSequenceArray": 2,                                 // this is a the postion in user array
+      "denominations": [
+        {
+          "value": 50,
+          "quantity": 1
+        },
+        {
+          "value": 20,
+          "quantity": 1
+        },
+        {
+          "value": 25,
+          "quantity": 3
+        },
+        {
+          "value": 10,
+          "quantity": 1
+        },
+      ],
+      "note": "this is a opening note"
+    },
+    {
+    "cashProvided": 72.85,
+      "cash": 72.85,
+      "difference": 0,
+      "cashRegisterRecordSequenceArray": 6,        // this is a the postion in cashRegister array
+      "userSequenceArray": 2,                                 // this is a the postion in user array
+      "denominations": [
+        {
+          "value": 50,
+          "quantity": 1
+        },
+        {
+          "value": 20,
+          "quantity": 1
+        },
+        {
+          "value": 25,
+          "quantity": 3
+        },
+        {
+          "value": 10,
+          "quantity": 1
+        },
+      ],
+      "note": "this is a opening note"
+    },
+    {
+    "cashProvided": 72.85,
+      "cash": 72.85,
+      "difference": 0,
+      "cashRegisterRecordSequenceArray": 7,        // this is a the postion in cashRegister array
+      "userSequenceArray": 2,                                 // this is a the postion in user array
+      "denominations": [
+        {
+          "value": 50,
+          "quantity": 1
+        },
+        {
+          "value": 20,
+          "quantity": 1
+        },
+        {
+          "value": 25,
+          "quantity": 3
+        },
+        {
+          "value": 10,
+          "quantity": 1
+        },
+      ],
+      "note": "this is a opening note"
+    },
+    {
+    "cashProvided": 72.85,
+      "cash": 72.85,
+      "difference": 0,
+      "cashRegisterRecordSequenceArray": 8,        // this is a the postion in cashRegister array
+      "userSequenceArray": 2,                                 // this is a the postion in user array
+      "denominations": [
+        {
+          "value": 50,
+          "quantity": 1
+        },
+        {
+          "value": 20,
+          "quantity": 1
+        },
+        {
+          "value": 25,
+          "quantity": 3
+        },
+        {
+          "value": 10,
+          "quantity": 1
+        },
+      ],
+      "note": "this is a opening note"
+    },
+    {
+    "cashProvided": 72.85,
+      "cash": 72.85,
+      "difference": 0,
+      "cashRegisterRecordSequenceArray": 9,        // this is a the postion in cashRegister array
       "userSequenceArray": 2,                                 // this is a the postion in user array
       "denominations": [
         {
