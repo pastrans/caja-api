@@ -19,7 +19,19 @@ export const seedData = {
     { name: 'Maria' },
     { name: 'Marisol' },
     { name: 'flor' },
-    { name: 'Julia' }
+    { name: 'Julia1' },
+    { name: 'Julia2' },
+    { name: 'Julia3' },
+    { name: 'Julia4' },
+    { name: 'Julia5' },
+    { name: 'Julia6' },
+    { name: 'Julia7' },
+    { name: 'Julia8' },
+    { name: 'Julia9' },
+    { name: 'Julia10' },
+    { name: 'Julia11' },
+    { name: 'Julia12' },
+    
   ],
 
   products: [

@@ -4,6 +4,8 @@ import {
   EmployeeEntity,
   CreateEmployeeDto,
   UpdateEmployeeDto,
+  PaginationDto,
+  EmployeePaginatedResult,
 } from '../../domain';
 
 export class EmployeeRepositoryImpl implements EmployeeRepository {
@@ -13,8 +15,8 @@ export class EmployeeRepositoryImpl implements EmployeeRepository {
     return this.datasource.create(createEmployeeDto);
   }
 
-  getAll(): Promise<EmployeeEntity[]> {
-    return this.datasource.getAll();
+  getAll(paginationDto: PaginationDto): Promise<EmployeePaginatedResult> {
+    return this.datasource.getAll(paginationDto);
   }
 
   findById(id: number): Promise<EmployeeEntity> {

@@ -4,7 +4,8 @@ import {
   EmployeeEntity,
   CreateEmployeeDto,
   UpdateEmployeeDto,
-  CustomError,
+  PaginationDto,
+  EmployeePaginatedResult,
 } from '../../domain';
 
 export class EmployeeDatasourceImpl implements EmployeeDatasource {
@@ -15,15 +16,27 @@ export class EmployeeDatasourceImpl implements EmployeeDatasource {
     return EmployeeEntity.fromObject(employee);
   }
 
-  async getAll(): Promise<EmployeeEntity[]> {
-    const employees = await prisma.employee.findMany();
-    return employees.map(EmployeeEntity.fromObject);
+  async getAll(paginationDto: PaginationDto): Promise<EmployeePaginatedResult> {
+    const { page, limit } = paginationDto;
+
+    const [total, employees] = await Promise.all([
+      prisma.employee.count(),
+      prisma.employee.findMany({
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
+
+    return {
+      total,
+      employees: employees.map(EmployeeEntity.fromObject),
+    };
   }
 
   async findById(id: number): Promise<EmployeeEntity> {
     const employee = await prisma.employee.findUnique({ where: { id } });
-    if (!employee) throw CustomError.notFound(`Employee with id ${id} not found`);
-    
+    if (!employee) throw `Employee with id ${id} not found`;
     return EmployeeEntity.fromObject(employee);
   }
 
@@ -40,7 +53,6 @@ export class EmployeeDatasourceImpl implements EmployeeDatasource {
 
   async deleteById(id: number): Promise<EmployeeEntity> {
     await this.findById(id);
-
     const deleted = await prisma.employee.delete({ where: { id } });
     return EmployeeEntity.fromObject(deleted);
   }

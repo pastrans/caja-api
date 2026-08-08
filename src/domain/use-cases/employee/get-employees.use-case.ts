@@ -1,14 +1,27 @@
+import { PaginationDto } from '../../dtos';
 import { EmployeeEntity } from '../../entities';
 import { EmployeeRepository } from '../../repositories';
+import { PaginatedResponse } from '../../interfaces/paginated-response.interface';
+import { PaginationHelper } from '../../helpers/pagination.helper';
 
 export interface GetEmployeesUseCase {
-  execute(): Promise<EmployeeEntity[]>;
+  execute(paginationDto: PaginationDto): Promise<PaginatedResponse<EmployeeEntity>>;
 }
 
 export class GetEmployees implements GetEmployeesUseCase {
-  constructor(private readonly repository: EmployeeRepository) {}
+  constructor(
+    private readonly repository: EmployeeRepository,
+    private readonly path: string = '/api/employees'
+  ) {}
 
-  execute(): Promise<EmployeeEntity[]> {
-    return this.repository.getAll();
+  async execute(paginationDto: PaginationDto): Promise<PaginatedResponse<EmployeeEntity>> {
+    const { employees, total } = await this.repository.getAll(paginationDto);
+
+    return PaginationHelper.createResponse<EmployeeEntity>(
+      employees,
+      total,
+      paginationDto,
+      this.path
+    );
   }
 }

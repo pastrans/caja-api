@@ -2,21 +2,27 @@ import { Request, Response, NextFunction } from 'express';
 import {
   CreateEmployee,
   CreateEmployeeDto,
-  CustomError,
   DeleteEmployee,
   EmployeeRepository,
   GetEmployee,
   GetEmployees,
   UpdateEmployee,
   UpdateEmployeeDto,
+  PaginationDto,
+  CustomError,
 } from '../../domain';
 
 export class EmployeesController {
   constructor(private readonly employeeRepository: EmployeeRepository) {}
 
   public getEmployees = (req: Request, res: Response, next: NextFunction) => {
-    new GetEmployees(this.employeeRepository)
-      .execute()
+    const { page, limit } = req.query;
+
+    const [error, paginationDto] = PaginationDto.create({ page, limit });
+    if (error) return next(CustomError.badRequest(error));
+
+    new GetEmployees(this.employeeRepository, req.baseUrl)
+      .execute(paginationDto!)
       .then((employees) => res.json(employees))
       .catch(next);
   };
