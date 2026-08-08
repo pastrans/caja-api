@@ -6,6 +6,7 @@ import {
   DeleteUser,
   GetUser,
   GetUsers,
+  PaginationDto,
   UpdateUser,
   UpdateUserDto,
   UserRepository,
@@ -15,9 +16,15 @@ export class UsersController {
   constructor(private readonly userRepository: UserRepository) {}
 
   public getUsers = (req: Request, res: Response, next: NextFunction) => {
-    new GetUsers(this.userRepository)
-      .execute()
-      .then((users) => res.json(users))
+    const { page, limit } = req.query;
+
+    const [error, paginationDto] = PaginationDto.create({ page, limit });
+    if (error) return next(CustomError.badRequest(error));
+
+    // req.baseUrl devuelve la ruta montada en Express (ej: '/api/users')
+    new GetUsers(this.userRepository, req.baseUrl)
+      .execute(paginationDto!)
+      .then((data) => res.json(data))
       .catch(next);
   };
 

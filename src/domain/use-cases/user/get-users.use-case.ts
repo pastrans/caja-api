@@ -1,14 +1,33 @@
+import { PaginationDto } from '../../dtos';
 import { UserEntity } from '../../entities';
 import { UserRepository } from '../../repositories';
+import { PaginatedResponse } from '../../interfaces/paginated-response.interface';
+import { PaginationHelper } from '../../helpers/pagination.helper';
 
 export interface GetUsersUseCase {
-  execute(): Promise<UserEntity[]>;
+  execute(paginationDto: PaginationDto): Promise<PaginatedResponse<UserEntity>>;
 }
 
 export class GetUsers implements GetUsersUseCase {
-  constructor(private readonly repository: UserRepository) {}
+  constructor(
+    private readonly repository: UserRepository,
+    private readonly path: string = '/api/users'
+  ) {}
 
-  execute(): Promise<UserEntity[]> {
-    return this.repository.getAll();
+  async execute(paginationDto: PaginationDto): Promise<PaginatedResponse<UserEntity>> {
+    const { users, total } = await this.repository.getAll(paginationDto);
+
+    // Ocultar contraseñas
+    const sanitizedUsers = users.map((user) => {
+      user.password = undefined;
+      return user;
+    });
+
+    return PaginationHelper.createResponse<UserEntity>(
+      sanitizedUsers,
+      total,
+      paginationDto,
+      this.path
+    );
   }
 }

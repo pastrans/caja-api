@@ -4,6 +4,8 @@ import {
   UserEntity,
   CreateUserDto,
   UpdateUserDto,
+  PaginationDto,
+  UserPaginatedResult,
 } from '../../domain';
 
 export class UserRepositoryImpl implements UserRepository {
@@ -13,8 +15,8 @@ export class UserRepositoryImpl implements UserRepository {
     return this.datasource.create(createUserDto);
   }
 
-  getAll(): Promise<UserEntity[]> {
-    return this.datasource.getAll();
+  getAll(paginationDto: PaginationDto): Promise<UserPaginatedResult> {
+    return this.datasource.getAll(paginationDto);
   }
 
   findById(id: number): Promise<UserEntity> {

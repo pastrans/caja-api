@@ -5,6 +5,8 @@ import {
   CreateUserDto,
   UpdateUserDto,
   CustomError,
+  PaginationDto,
+  UserPaginatedResult,
 } from '../../domain';
 
 export class UserDatasourceImpl implements UserDatasource {
@@ -27,9 +29,22 @@ export class UserDatasourceImpl implements UserDatasource {
     return UserEntity.fromObject(user);
   }
 
-  async getAll(): Promise<UserEntity[]> {
-    const users = await prisma.user.findMany();
-    return users.map(UserEntity.fromObject);
+  async getAll(paginationDto: PaginationDto): Promise<UserPaginatedResult> {
+    const { page, limit } = paginationDto;
+
+    const [total, users] = await Promise.all([
+      prisma.user.count(),
+      prisma.user.findMany({
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
+
+    return {
+      total,
+      users: users.map(UserEntity.fromObject),
+    };
   }
 
   async findById(id: number): Promise<UserEntity> {

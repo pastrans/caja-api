@@ -3,6 +3,15 @@ export const seedData = {
   users: [
     { name: 'Carlos', email: 'pastran2526@gmail.com', role : 'ADMIN', password: '123456' },
     { name: 'idalia', email: 'pastran@gmail.com', role : 'CASHIER', password:  '123456' },
+    // { name: 'Carlos', email: 'pastran25261@gmail.com', role : 'ADMIN', password: '123456' },
+    // { name: 'Carlos', email: 'pastran25262@gmail.com', role : 'ADMIN', password: '123456' },
+    // { name: 'Carlos', email: 'pastran25263@gmail.com', role : 'ADMIN', password: '123456' },
+    // { name: 'Carlos', email: 'pastran25264@gmail.com', role : 'ADMIN', password: '123456' },
+    // { name: 'Carlos', email: 'pastran25265@gmail.com', role : 'ADMIN', password: '123456' },
+    // { name: 'Carlos', email: 'pastran25266@gmail.com', role : 'ADMIN', password: '123456' },
+    // { name: 'Carlos', email: 'pastran25267@gmail.com', role : 'ADMIN', password: '123456' },
+    // { name: 'Carlos', email: 'pastran25268@gmail.com', role : 'ADMIN', password: '123456' },
+    // { name: 'Carlos', email: 'pastran25269@gmail.com', role : 'ADMIN', password: '123456' },
    
   ],
 
