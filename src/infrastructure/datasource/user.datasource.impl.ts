@@ -13,7 +13,6 @@ export class UserDatasourceImpl implements UserDatasource {
   async create(createUserDto: CreateUserDto): Promise<UserEntity> {
     const { name, email, password, role } = createUserDto;
     
-    // Opcional: verificar si el correo ya existe antes de crear
     const existingUser = await this.findByEmail(email);
     if (existingUser) throw CustomError.badRequest('User with this email already exists');
 

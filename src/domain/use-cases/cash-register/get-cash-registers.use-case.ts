@@ -17,8 +17,10 @@ export class GetCashRegisters implements GetCashRegistersUseCase {
   async execute(paginationDto: PaginationDto): Promise<PaginatedResponse<CashRegisterRecordEntity>> {
     const { records, total } = await this.repository.getAll(paginationDto);
 
+    const sanitizedRecords = records.map((record) => record.sanitize());
+
     return PaginationHelper.createResponse<CashRegisterRecordEntity>(
-      records,
+      sanitizedRecords,
       total,
       paginationDto,
       this.path

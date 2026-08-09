@@ -9,7 +9,8 @@ export interface CloseCashRegisterUseCase {
 export class CloseCashRegister implements CloseCashRegisterUseCase {
   constructor(private readonly repository: CashRegisterRecordRepository) {}
 
-  execute(dto: CloseCashRegisterDto): Promise<CashRegisterRecordEntity> {
-    return this.repository.close(dto);
+  async execute(dto: CloseCashRegisterDto): Promise<CashRegisterRecordEntity> {
+    const record = await this.repository.close(dto);
+    return record.sanitize();
   }
 }

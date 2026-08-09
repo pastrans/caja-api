@@ -9,7 +9,8 @@ export interface OpenCashRegisterUseCase {
 export class OpenCashRegister implements OpenCashRegisterUseCase {
   constructor(private readonly repository: CashRegisterRecordRepository) {}
 
-  execute(dto: OpenCashRegisterDto): Promise<CashRegisterRecordEntity> {
-    return this.repository.open(dto);
+  async execute(dto: OpenCashRegisterDto): Promise<CashRegisterRecordEntity> {
+    const record = await this.repository.open(dto);
+    return record.sanitize(); 
   }
 }

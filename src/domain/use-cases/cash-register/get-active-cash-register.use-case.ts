@@ -8,7 +8,8 @@ export interface GetActiveCashRegisterUseCase {
 export class GetActiveCashRegister implements GetActiveCashRegisterUseCase {
   constructor(private readonly repository: CashRegisterRecordRepository) {}
 
-  execute(): Promise<CashRegisterRecordEntity | null> {
-    return this.repository.findActive();
+  async execute(): Promise<CashRegisterRecordEntity | null> {
+    const record = await this.repository.findActive();
+    return record ? record.sanitize() : null;
   }
 }

@@ -17,11 +17,7 @@ export class GetUsers implements GetUsersUseCase {
   async execute(paginationDto: PaginationDto): Promise<PaginatedResponse<UserEntity>> {
     const { users, total } = await this.repository.getAll(paginationDto);
 
-    // Ocultar contraseñas
-    const sanitizedUsers = users.map((user) => {
-      user.password = undefined;
-      return user;
-    });
+    const sanitizedUsers = users.map((user) => user.sanitize());
 
     return PaginationHelper.createResponse<UserEntity>(
       sanitizedUsers,

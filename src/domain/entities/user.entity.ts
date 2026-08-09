@@ -8,6 +8,11 @@ export class UserEntity {
     public createdAt?: Date,
     public updatedAt?: Date
   ) {}
+  
+  public sanitize(): UserEntity {
+    this.password = undefined;
+    return this;
+  }
 
   public static fromObject(object: { [key: string]: any }): UserEntity {
     const { id, name, email, password, role, createdAt, updatedAt } = object;

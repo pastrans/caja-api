@@ -8,7 +8,8 @@ export interface GetUserUseCase {
 export class GetUser implements GetUserUseCase {
   constructor(private readonly repository: UserRepository) {}
 
-  execute(id: number): Promise<UserEntity> {
-    return this.repository.findById(id);
+  async execute(id: number): Promise<UserEntity> {
+    const user = await this.repository.findById(id);
+    return user.sanitize();
   }
 }

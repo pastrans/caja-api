@@ -19,6 +19,16 @@ export class CashRegisterRecordEntity {
     return this.status === 'OPEN';
   }
 
+  public sanitize(): CashRegisterRecordEntity {
+    if (this.opening?.user) {
+      this.opening.user.password = undefined;
+    }
+    if (this.closing?.user) {
+      this.closing.user.password = undefined;
+    }
+    return this;
+  }
+
   public static fromObject(object: { [key: string]: any }): CashRegisterRecordEntity {
     const {
       id,
