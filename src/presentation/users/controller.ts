@@ -16,9 +16,7 @@ export class UsersController {
   constructor(private readonly userRepository: UserRepository) {}
 
   public getUsers = (req: Request, res: Response, next: NextFunction) => {
-    const { page, limit } = req.query;
-
-    const [error, paginationDto] = PaginationDto.create({ page, limit });
+    const [error, paginationDto] = PaginationDto.create(req.query);
     if (error) return next(CustomError.badRequest(error));
 
     // req.baseUrl devuelve la ruta montada en Express (ej: '/api/users')

@@ -47,9 +47,7 @@ export class CashRegistersController {
   };
 
   public getCashRegisters = (req: Request, res: Response, next: NextFunction) => {
-    const { page, limit } = req.query;
-
-    const [error, paginationDto] = PaginationDto.create({ page, limit });
+    const [error, paginationDto] = PaginationDto.create(req.query);
     if (error) return next(CustomError.badRequest(error));
 
     new GetCashRegisters(this.cashRegisterRepository, req.baseUrl)

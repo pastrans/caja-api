@@ -29,11 +29,14 @@ export class UserDatasourceImpl implements UserDatasource {
   }
 
   async getAll(paginationDto: PaginationDto): Promise<UserPaginatedResult> {
-    const { page, limit } = paginationDto;
+    const { page, limit, available } = paginationDto;
+
+    const whereCondition = available !== undefined ? { available } : {};
 
     const [total, users] = await Promise.all([
-      prisma.user.count(),
+      prisma.user.count({ where: whereCondition }),
       prisma.user.findMany({
+        where: whereCondition,
         skip: (page - 1) * limit,
         take: limit,
         orderBy: { createdAt: 'desc' },
@@ -45,6 +48,7 @@ export class UserDatasourceImpl implements UserDatasource {
       users: users.map(UserEntity.fromObject),
     };
   }
+  
 
   async findById(id: number): Promise<UserEntity> {
     const user = await prisma.user.findUnique({ where: { id } });
@@ -74,7 +78,11 @@ export class UserDatasourceImpl implements UserDatasource {
   async deleteById(id: number): Promise<UserEntity> {
     await this.findById(id);
 
-    const deleted = await prisma.user.delete({ where: { id } });
+    const deleted = await prisma.user.update({
+      where: { id },
+      data: { available: false },
+    });
+
     return UserEntity.fromObject(deleted);
   }
 }

@@ -4,6 +4,7 @@ export class UserEntity {
     public name: string,
     public email: string,
     public role: 'ADMIN' | 'CASHIER',
+    public available: boolean = true,
     public password?: string,
     public createdAt?: Date,
     public updatedAt?: Date
@@ -15,7 +16,7 @@ export class UserEntity {
   }
 
   public static fromObject(object: { [key: string]: any }): UserEntity {
-    const { id, name, email, password, role, createdAt, updatedAt } = object;
+    const { id, name, email, password, role, available, createdAt, updatedAt } = object;
 
     if (!id) throw 'User ID is required';
     if (!name) throw 'User name is required';
@@ -26,6 +27,7 @@ export class UserEntity {
       name,
       email,
       role ?? 'CASHIER',
+      available ?? true,
       password,
       createdAt ? new Date(createdAt) : undefined,
       updatedAt ? new Date(updatedAt) : undefined

@@ -17,17 +17,19 @@ export class EmployeeDatasourceImpl implements EmployeeDatasource {
   }
 
   async getAll(paginationDto: PaginationDto): Promise<EmployeePaginatedResult> {
-    const { page, limit } = paginationDto;
+    const { page, limit, available } = paginationDto;
+
+    const whereCondition = available !== undefined ? { available } : {};
 
     const [total, employees] = await Promise.all([
-      prisma.employee.count(),
+      prisma.employee.count({ where: whereCondition }),
       prisma.employee.findMany({
+        where: whereCondition,
         skip: (page - 1) * limit,
         take: limit,
         orderBy: { createdAt: 'desc' },
       }),
     ]);
-
     return {
       total,
       employees: employees.map(EmployeeEntity.fromObject),
@@ -53,7 +55,12 @@ export class EmployeeDatasourceImpl implements EmployeeDatasource {
 
   async deleteById(id: number): Promise<EmployeeEntity> {
     await this.findById(id);
-    const deleted = await prisma.employee.delete({ where: { id } });
+
+    const deleted = await prisma.employee.update({
+      where: { id },
+      data: { available: false },
+    });
+
     return EmployeeEntity.fromObject(deleted);
   }
 }

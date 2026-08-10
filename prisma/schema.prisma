@@ -38,6 +38,7 @@ model User {
   email     String   @unique
   password  String
   role      UserRole @default(CASHIER)
+  available Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -49,6 +50,7 @@ model User {
 model Employee {
   id           Int                 @id @default(autoincrement())
   name         String
+  available    Boolean            @default(true)
   createdAt    DateTime            @default(now())
   updatedAt    DateTime            @updatedAt
 

@@ -21,25 +21,26 @@ export class LoginUser implements LoginUserUseCase {
   ) {}
 
   async execute(dto: LoginUserDto): Promise<UserAuthResponse> {
-    // 1. Buscar usuario por email usando el UserRepository existente
+    // 1. Buscar usuario por email
     const user = await this.userRepository.findByEmail(dto.email);
     if (!user) throw CustomError.badRequest('Invalid credentials');
 
-    // 2. Validar que la contraseña proporcionada sea correcta
-    if (!user!.password || !this.comparePassword(dto.password, user!.password)) {
-      throw CustomError.badRequest('Invalid credentials');
+    // 2. Verificar si el usuario está deshabilitado
+    if (!user.available) {
+      throw CustomError.unauthorized('Invalid credentials');
     }
 
-    // 3. Generar token de sesión
-    const token = await this.signToken({ id: user!.id, role: user!.role });
-    if (!token) throw CustomError.badRequest('Error generating JWT'); 
+    // 3. Validar la contraseña
+    const isMatching = bcryptAdapter.compare(dto.password, user.password!);
+    if (!isMatching) throw CustomError.badRequest('Invalid credentials');
 
-    // Ocultar contraseña antes de retornar la entidad
-    user!.password = undefined;
+    // 4. Generar Token
+    const token = await JwtAdapter.generateToken({ id: user.id, role: user.role });
+    if (!token) throw CustomError.internalServer('Error generating JWT'); 
 
     return {
       token,
-      user: user!,
+      user: user.sanitize(),
     };
   }
 }

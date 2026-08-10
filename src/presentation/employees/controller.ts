@@ -16,9 +16,7 @@ export class EmployeesController {
   constructor(private readonly employeeRepository: EmployeeRepository) {}
 
   public getEmployees = (req: Request, res: Response, next: NextFunction) => {
-    const { page, limit } = req.query;
-
-    const [error, paginationDto] = PaginationDto.create({ page, limit });
+    const [error, paginationDto] = PaginationDto.create(req.query);
     if (error) return next(CustomError.badRequest(error));
 
     new GetEmployees(this.employeeRepository, req.baseUrl)
