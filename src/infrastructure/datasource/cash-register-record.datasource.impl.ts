@@ -22,9 +22,6 @@ export class CashRegisterRecordDatasourceImpl implements CashRegisterRecordDatas
   };
 
   async open(openDto: OpenCashRegisterDto): Promise<CashRegisterRecordEntity> {
-    const active = await this.findActive();
-    if (active) throw CustomError.badRequest('There is already an open cash register');
-
     const record = await prisma.cashRegisterRecord.create({
       data: {
         status: 'OPEN',
@@ -43,6 +40,7 @@ export class CashRegisterRecordDatasourceImpl implements CashRegisterRecordDatas
     return CashRegisterRecordEntity.fromObject(record);
   }
 
+  
   async close(closeDto: CloseCashRegisterDto): Promise<CashRegisterRecordEntity> {
     const record = await this.findById(closeDto.cashRegisterRecordId);
     if (record.status === 'CLOSED') throw CustomError.badRequest('Cash register is already closed');

@@ -6,6 +6,7 @@ import {
   UpdateEmployeeDto,
   PaginationDto,
   EmployeePaginatedResult,
+  CustomError,
 } from '../../domain';
 
 export class EmployeeDatasourceImpl implements EmployeeDatasource {
@@ -38,7 +39,7 @@ export class EmployeeDatasourceImpl implements EmployeeDatasource {
 
   async findById(id: number): Promise<EmployeeEntity> {
     const employee = await prisma.employee.findUnique({ where: { id } });
-    if (!employee) throw `Employee with id ${id} not found`;
+    if (!employee) throw CustomError.notFound(`User with id ${id} not found`);
     return EmployeeEntity.fromObject(employee);
   }
 

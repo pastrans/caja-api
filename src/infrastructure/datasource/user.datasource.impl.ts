@@ -53,7 +53,6 @@ export class UserDatasourceImpl implements UserDatasource {
   async findById(id: number): Promise<UserEntity> {
     const user = await prisma.user.findUnique({ where: { id } });
     if (!user) throw CustomError.notFound(`User with id ${id} not found`);
-
     return UserEntity.fromObject(user);
   }
 

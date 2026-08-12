@@ -20,7 +20,12 @@ export class CashRegistersController {
   constructor(private readonly cashRegisterRepository: CashRegisterRecordRepository) {}
 
   public openCashRegister = (req: Request, res: Response, next: NextFunction) => {
-    const [error, openDto] = OpenCashRegisterDto.create(req.body);
+    const user = req.body.user;
+
+    const [error, openDto] = OpenCashRegisterDto.create({
+      ...req.body,
+      userId: user.id,
+    });
     if (error) return next(CustomError.badRequest(error));
 
     new OpenCashRegister(this.cashRegisterRepository)
@@ -30,7 +35,12 @@ export class CashRegistersController {
   };
 
   public closeCashRegister = (req: Request, res: Response, next: NextFunction) => {
-    const [error, closeDto] = CloseCashRegisterDto.create(req.body);
+    const user = req.body.user;
+
+    const [error, closeDto] = CloseCashRegisterDto.create({
+      ...req.body,
+      userId: user.id,
+    });
     if (error) return next(CustomError.badRequest(error));
 
     new CloseCashRegister(this.cashRegisterRepository)
