@@ -19,7 +19,7 @@ export class EmployeeRepositoryImpl implements EmployeeRepository {
     return this.datasource.getAll(paginationDto);
   }
 
-  findById(id: number): Promise<EmployeeEntity> {
+  findById(id: number): Promise<EmployeeEntity | null> {
     return this.datasource.findById(id);
   }
 

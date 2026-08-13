@@ -5,6 +5,8 @@ import {
   CashRegisterRecordRepositoryImpl,
   UserRepositoryImpl,
   UserDatasourceImpl,
+  EmployeeDatasourceImpl,
+  EmployeeRepositoryImpl,
 } from '../../infrastructure';
 import { AuthMiddleware } from '../middlewares/auth.middleware';
 
@@ -12,10 +14,14 @@ export class CashRegisterRoutes {
   static get routes(): Router {
     const router = Router();
 
-    const datasource = new CashRegisterRecordDatasourceImpl();
-    const repository = new CashRegisterRecordRepositoryImpl(datasource);
-    const controller = new CashRegistersController(repository);
+
     const userRepository = new UserRepositoryImpl(new UserDatasourceImpl());
+    const cashDatasource = new CashRegisterRecordDatasourceImpl();
+    const cashRepository = new CashRegisterRecordRepositoryImpl(cashDatasource);
+
+    const employeeDatasource = new EmployeeDatasourceImpl();
+    const employeeRepository = new EmployeeRepositoryImpl(employeeDatasource);
+    const controller = new CashRegistersController(cashRepository, employeeRepository);
 
     // const requireAdmin = AuthMiddleware.validateJWT(userRepository,'ADMIN');
     const allowAllRoles = AuthMiddleware.validateJWT(userRepository, 'ADMIN', 'CASHIER');

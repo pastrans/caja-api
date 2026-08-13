@@ -7,11 +7,11 @@ export class CreateCashInOutDto {
     public readonly note?: string
   ) {}
 
-  static create(props: { [key: string]: any }):  [string, undefined]  | [undefined, CreateCashInOutDto]  {
+  static create(props: { [key: string]: any }):[string, undefined]  | [undefined, CreateCashInOutDto]  {
     const { cashRegisterRecordId, type, amount, reason, note } = props;
 
-    if (!cashRegisterRecordId || isNaN(Number(cashRegisterRecordId))) {
-      return  ['cashRegisterRecordId must be a valid number', undefined];
+    if (!cashRegisterRecordId || isNaN(Number(cashRegisterRecordId)) || Number(cashRegisterRecordId) <= 0) {
+      return ['cashRegisterRecordId must be a valid positive number', undefined];
     }
 
     if (!type || (type !== 'IN' && type !== 'OUT')) {
@@ -22,8 +22,8 @@ export class CreateCashInOutDto {
       return ['amount must be a valid positive number', undefined];
     }
 
-    if (!reason || typeof reason !== 'string') {
-      return ['reason is required', undefined];
+    if (!reason || typeof reason !== 'string' || reason.trim().length === 0) {
+      return ['reason is required and cannot be empty', undefined];
     }
 
     return [
@@ -32,8 +32,8 @@ export class CreateCashInOutDto {
         Number(cashRegisterRecordId),
         type,
         Number(amount),
-        reason,
-        note
+        reason.trim(),
+        note?.trim()
       ),
     ];
   }

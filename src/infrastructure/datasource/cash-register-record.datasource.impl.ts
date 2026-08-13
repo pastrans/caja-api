@@ -42,9 +42,6 @@ export class CashRegisterRecordDatasourceImpl implements CashRegisterRecordDatas
 
   
   async close(closeDto: CloseCashRegisterDto): Promise<CashRegisterRecordEntity> {
-    const record = await this.findById(closeDto.cashRegisterRecordId);
-    if (record.status === 'CLOSED') throw CustomError.badRequest('Cash register is already closed');
-
     const updated = await prisma.cashRegisterRecord.update({
       where: { id: closeDto.cashRegisterRecordId },
       data: {
@@ -53,6 +50,9 @@ export class CashRegisterRecordDatasourceImpl implements CashRegisterRecordDatas
           create: {
             cashProvided: closeDto.cashProvided,
             difference: closeDto.difference,
+            totalTransactions: closeDto.totalTransactions,
+            totalCashInOut: closeDto.totalCashInOut,
+            totalExpected: closeDto.totalExpected,
             userId: closeDto.userId,
             denominations: closeDto.denominations as any,
             ...(closeDto.note && { note: closeDto.note }),
@@ -105,10 +105,6 @@ export class CashRegisterRecordDatasourceImpl implements CashRegisterRecordDatas
   }
 
   async createTransaction(dto: CreateTransactionDto): Promise<TransactionRecordEntity> {
-    const cashRegister = await this.findById(dto.cashRegisterRecordId);
-    if (cashRegister.status !== 'OPEN') {
-      throw CustomError.badRequest('Cannot register transaction on a closed cash register');
-    }
 
     const transaction = await prisma.transactionRecord.create({
       data: {
@@ -127,11 +123,6 @@ export class CashRegisterRecordDatasourceImpl implements CashRegisterRecordDatas
   }
 
   async createCashInOut(dto: CreateCashInOutDto): Promise<CashInOutRecordEntity> {
-    const cashRegister = await this.findById(dto.cashRegisterRecordId);
-    if (cashRegister.status !== 'OPEN') {
-      throw CustomError.badRequest('Cannot record cash movement on a closed cash register');
-    }
-
     const movement = await prisma.cashInOutRecord.create({
       data: {
         cashRegisterRecordId: dto.cashRegisterRecordId,

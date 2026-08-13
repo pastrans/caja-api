@@ -82,7 +82,7 @@ model Opening {
   date                 DateTime           @default(now())
   cash                 Float
   note                 String?
-  denominations        Json               // Structure: [{ value: number, quantity: number }]
+  denominations        Json?               // Structure: [{ value: number, quantity: number }
 
   // Foreign Key for CashRegisterRecord (1-to-1)
   cashRegisterRecordId Int                @unique
@@ -95,18 +95,18 @@ model Opening {
 
 model Closing {
   id                   Int                @id @default(autoincrement())
-  date                 DateTime           @default(now())
+  cashRegisterRecordId Int                @unique
   cashProvided         Float
   difference           Float
-  note                 String?
-  denominations        Json               // Structure: [{ value: number, quantity: number }]
-
-  // Foreign Key for CashRegisterRecord (1-to-1)
-  cashRegisterRecordId Int                @unique
-  cashRegisterRecord   CashRegisterRecord @relation(fields: [cashRegisterRecordId], references: [id], onDelete: Cascade)
-
-  // Relación con el Usuario que realiza el cierre
+  totalTransactions    Float
+  totalCashInOut       Float
+  totalExpected        Float
   userId               Int
+  denominations        Json?
+  note                 String?
+  createdAt            DateTime           @default(now())
+
+  cashRegisterRecord   CashRegisterRecord @relation(fields: [cashRegisterRecordId], references: [id])
   user                 User               @relation(fields: [userId], references: [id])
 }
 
@@ -129,7 +129,7 @@ model TransactionRecord {
   cashProvided         Float
   changeReturned       Float
   note                 String?
-  denominations        Json               // Structure: [{ value: number, quantity: number }]
+  denominations        Json?               // Structure: [{ value: number, quantity: number }]
 
   // Relación con CashRegisterRecord
   cashRegisterRecordId Int

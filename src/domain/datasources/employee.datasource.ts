@@ -9,7 +9,7 @@ export interface EmployeePaginatedResult {
 export abstract class EmployeeDatasource {
   abstract create(createEmployeeDto: CreateEmployeeDto): Promise<EmployeeEntity>;
   abstract getAll(paginationDto: PaginationDto): Promise<EmployeePaginatedResult>; 
-  abstract findById(id: number): Promise<EmployeeEntity>;
+  abstract findById(id: number): Promise<EmployeeEntity | null>;
   abstract updateById(updateEmployeeDto: UpdateEmployeeDto): Promise<EmployeeEntity>;
   abstract deleteById(id: number): Promise<EmployeeEntity>;
 }

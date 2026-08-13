@@ -8,6 +8,7 @@ import {
   CreateTransaction,
   CreateTransactionDto,
   CustomError,
+  EmployeeRepository,
   GetActiveCashRegister,
   GetCashRegister,
   GetCashRegisters,
@@ -17,7 +18,10 @@ import {
 } from '../../domain';
 
 export class CashRegistersController {
-  constructor(private readonly cashRegisterRepository: CashRegisterRecordRepository) {}
+  constructor(
+    private readonly cashRegisterRepository: CashRegisterRecordRepository,
+    private readonly employeeRepository: EmployeeRepository,
+  ) {}
 
   public openCashRegister = (req: Request, res: Response, next: NextFunction) => {
     const user = req.body.user;
@@ -80,7 +84,7 @@ export class CashRegistersController {
     const [error, transactionDto] = CreateTransactionDto.create(req.body);
     if (error) return next(CustomError.badRequest(error));
 
-    new CreateTransaction(this.cashRegisterRepository)
+    new CreateTransaction(this.cashRegisterRepository, this.employeeRepository)
       .execute(transactionDto!)
       .then((transaction) => res.json(transaction))
       .catch(next);
