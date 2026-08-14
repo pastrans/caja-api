@@ -89,7 +89,6 @@ async function main() {
     const employee = employees[transactionData.employeeSequenceArray - 1];
     if (!cashRegister) throw new Error(`Caja no encontrada en la posición ${transactionData.cashRegisterRecordSequenceArray}`);
     if (!employee) throw new Error(`Empleado no encontrado en la posición ${transactionData.employeeSequenceArray}`);
-
     const [error, createTransactionDto] = CreateTransactionDto.create({
       ...transactionData,
       cashRegisterRecordId: cashRegister.id,
