@@ -38,22 +38,16 @@ export class CashRegisterRecordEntity {
       transactions,
       cashInOut,
       createdAt,
-      updatedAt
+      updatedAt,
     } = object;
-
-    if (!id) throw 'CashRegisterRecord ID is required';
 
     return new CashRegisterRecordEntity(
       Number(id),
-      status ?? 'OPEN',
+      status,
       opening ? OpeningEntity.fromObject(opening) : null,
-      closing ? ClosingEntity.fromObject(closing) : null,
-      Array.isArray(transactions)
-        ? transactions.map(t => TransactionRecordEntity.fromObject(t))
-        : [],
-      Array.isArray(cashInOut)
-        ? cashInOut.map(c => CashInOutRecordEntity.fromObject(c))
-        : [],
+      closing ? ClosingEntity.fromObject(closing) : null, // 👈 Pasa el objeto completo de Prisma
+      transactions ? transactions.map(TransactionRecordEntity.fromObject) : [],
+      cashInOut ? cashInOut.map(CashInOutRecordEntity.fromObject) : [],
       createdAt ? new Date(createdAt) : undefined,
       updatedAt ? new Date(updatedAt) : undefined
     );
