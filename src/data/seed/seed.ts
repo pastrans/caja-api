@@ -1,5 +1,6 @@
 import { prisma } from '../../data/postgres';
 import { seedData } from './data';
+import { bcryptAdapter } from '../../config';
 import {
   CreateCashInOutDto,
   CloseCashRegisterDto,
@@ -46,7 +47,7 @@ async function main() {
   const userCreationPromises = seedData.users.map(async(user) => {
     const [error, createUserDto] = CreateUserDto.create({
       ...user,
-      password: await user.password, // Resolvemos la promesa del hash
+      password: await bcryptAdapter.hash( user.password ), // Resolvemos la promesa del hash
     });
     if (error) throw new Error(`Error en DTO de usuario: ${error}`);
     return userDatasource.create(createUserDto!);
