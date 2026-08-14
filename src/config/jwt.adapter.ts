@@ -10,7 +10,7 @@ export class JwtAdapter {
 
   // DI?
 
-  static generateToken( payload: object, duration: string = '2h' ): Promise<string | null> {
+  static generateToken( payload: object, duration: string = '8h' ): Promise<string | null> {
 
     return new Promise((resolve) => {
       jwt.sign(payload, JWT_SEED, { expiresIn: duration as any }, (err, token) => {

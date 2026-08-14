@@ -16,7 +16,10 @@ function main() {
     port: envs.PORT,
     public_path: envs.PUBLIC_PATH,
     routes: AppRoutes.routes,
+    acceptedOrigins: envs.ACCEPTED_ORIGINS,
   });
+
+  
 
   server.start();
 }

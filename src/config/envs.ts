@@ -15,6 +15,7 @@ export const envs = {
   MAILER_SECRET_KEY: get('MAILER_SECRET_KEY').required().asString(),
 
   FRONTEND_URL: get('FRONTEND_URL').required().asString(),
+  ACCEPTED_ORIGINS: get('ACCEPTED_ORIGINS').default('http://localhost:4200').asArray(',')
 }
 
 
