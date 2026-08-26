@@ -11,14 +11,14 @@ export class RegisterUserDto {
     public password: string,
   ) {}
 
-  static create( object: { [key:string]:any } ): [string?, RegisterUserDto?] {
+  static create( object: { [key:string]:any } ):[string, undefined]  | [undefined, RegisterUserDto]{
     const { name, email, password } = object;
 
-    if ( !name ) return ['Missing name'];
-    if ( !email ) return ['Missing email'];
-    if ( !regularExps.email.test( email ) ) return ['Email is not valid'];
-    if ( !password ) return ['Missing password'];
-    if ( password.length < 6 ) return ['Password too short'];
+    if ( !name ) return ['Missing name', undefined];
+    if ( !email ) return ['Missing email', undefined];
+    if ( !regularExps.email.test( email ) ) return ['Email is not valid', undefined];
+    if ( !password ) return ['Missing password', undefined];
+    if ( password.length < 6 ) return ['Password too short', undefined];
 
     return [undefined, new RegisterUserDto(name, email, password)];
 
