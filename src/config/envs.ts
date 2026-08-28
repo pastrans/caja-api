@@ -13,10 +13,10 @@ export const envs = {
   MAILER_SERVICE: get('MAILER_SERVICE').required().asString(),
   MAILER_EMAIL: get('MAILER_EMAIL').required().asString(),
   MAILER_SECRET_KEY: get('MAILER_SECRET_KEY').required().asString(),
+  MAILER_HOST: get('MAILER_HOST').default('smtp.gmail.com').asString(),
+  MAILER_PORT: get('MAILER_PORT').default('587').asPortNumber(),
 
   FRONTEND_URL: get('FRONTEND_URL').required().asString(),
   ACCEPTED_ORIGINS: get('ACCEPTED_ORIGINS').default('http://localhost:4200').asArray(',')
+  
 }
-
-
-
