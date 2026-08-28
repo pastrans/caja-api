@@ -1,3 +1,7 @@
+import dns from 'node:dns';
+
+dns.setDefaultResultOrder('ipv4first');
+
 import express, { Router } from 'express';
 import compression from 'compression';
 import cors from 'cors';

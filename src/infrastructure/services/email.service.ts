@@ -1,4 +1,5 @@
 import nodemailer, { Transporter } from 'nodemailer';
+import SMTPTransport from 'nodemailer/lib/smtp-transport';
 
 export interface SendMailOptions {
   to: string | string[];
@@ -38,10 +39,10 @@ export class EmailService {
     this.mailerEmail = mailerEmail;
     this.postToProvider = postToProvider;
 
-    this.transporter = nodemailer.createTransport({
+    const transportOptions: SMTPTransport.Options = {
       host: mailerHost,
       port: mailerPort,
-      secure: mailerPort === 465, // true para 465 (SSL), false para 587 (TLS/STARTTLS)
+      secure: mailerPort === 465,
       auth: {
         user: mailerEmail,
         pass: senderEmailPassword,
@@ -49,7 +50,13 @@ export class EmailService {
       tls: {
         rejectUnauthorized: false,
       },
-    });
+    };
+
+    // Pasamos options con soporte de socket IPv4 sin choques de tipo
+    this.transporter = nodemailer.createTransport({
+      ...transportOptions,
+      family: 4,
+    } as SMTPTransport.Options);
   }
 
 
