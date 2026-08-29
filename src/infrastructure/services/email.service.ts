@@ -1,85 +1,58 @@
-import nodemailer, { Transporter } from 'nodemailer';
-import SMTPTransport from 'nodemailer/lib/smtp-transport';
+import sgMail from '@sendgrid/mail';
 
 export interface SendMailOptions {
   to: string | string[];
   subject: string;
   htmlBody: string;
-  attachements?: Attachement[];
-}
-
-export interface Attachement {
-  filename: string;
-  path: string;
 }
 
 export interface EmailServiceOptions {
-  mailerHost?: string;
-  mailerPort?: number;
+  apiKey: string;
   mailerEmail: string;
-  senderEmailPassword: string;
+  senderName?: string;
   postToProvider: boolean;
 }
 
-
 export class EmailService {
   private readonly mailerEmail: string;
+  private readonly senderName: string;
   private readonly postToProvider: boolean;
-  private transporter: Transporter;
 
- constructor(options: EmailServiceOptions) {
+  constructor(options: EmailServiceOptions) {
     const {
-      mailerHost = 'smtp.gmail.com',
-      mailerPort = 587,
+      apiKey,
       mailerEmail,
-      senderEmailPassword,
+      senderName = 'POS System',
       postToProvider,
     } = options;
 
     this.mailerEmail = mailerEmail;
+    this.senderName = senderName;
     this.postToProvider = postToProvider;
 
-    const transportOptions: SMTPTransport.Options = {
-      host: mailerHost,
-      port: mailerPort,
-      secure: mailerPort === 465,
-      auth: {
-        user: mailerEmail,
-        pass: senderEmailPassword,
-      },
-      tls: {
-        rejectUnauthorized: false,
-      },
-    };
-
-    // Pasamos options con soporte de socket IPv4 sin choques de tipo
-    this.transporter = nodemailer.createTransport({
-      ...transportOptions,
-      family: 4,
-    } as SMTPTransport.Options);
+    sgMail.setApiKey(apiKey);
   }
 
-
- async sendEmail(options: SendMailOptions): Promise<boolean> {
-    const { to, subject, htmlBody, attachements = [] } = options;
+  async sendEmail(options: SendMailOptions): Promise<boolean> {
+    const { to, subject, htmlBody } = options;
 
     try {
       if (!this.postToProvider) return true;
 
-      await this.transporter.sendMail({
-        from: this.mailerEmail,
+      await sgMail.send({
         to: to,
+        from: {
+          email: this.mailerEmail,
+          name: this.senderName,
+        },
         subject: subject,
         html: htmlBody,
-        attachments: attachements,
       });
 
       return true;
-    } catch (error) {
-      console.error('Email send error:', error);
+    } catch (error: any) {
+      console.error('Email send error via SendGrid API:', error?.response?.body || error);
       return false;
     }
   }
-
-
 }
