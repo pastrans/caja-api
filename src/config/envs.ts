@@ -13,4 +13,14 @@ export const envs = {
 
   FRONTEND_URL: get('FRONTEND_URL').required().asString(),
   ACCEPTED_ORIGINS: get('ACCEPTED_ORIGINS').default('http://localhost:4200').asArray(','),
+
+  // Zona horaria del negocio (IANA) usada para calcular días, semanas y meses en el dashboard
+  TIMEZONE: get('TIMEZONE').default('America/Mexico_City').asString(),
 };
+
+// TIMEZONE debe ser una zona horaria IANA válida (ej: America/Mexico_City)
+try {
+  new Intl.DateTimeFormat('en-US', { timeZone: envs.TIMEZONE });
+} catch {
+  throw new Error(`Invalid TIMEZONE env var: ${envs.TIMEZONE}`);
+}
