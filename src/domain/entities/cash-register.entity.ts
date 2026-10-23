@@ -3,6 +3,15 @@ import { ClosingEntity } from "./closing.entity";
 import { OpeningEntity } from "./opening.entity";
 import { TransactionRecordEntity } from "./transaction-record.entity";
 
+// Resumen que acompaña a cada caja en los listados (en lugar del detalle completo)
+export interface CashRegisterSummary {
+  transactionsCount: number;
+  totalTransactions: number;
+  cashInOutCount: number;
+  totalCashIn: number;
+  totalCashOut: number;
+}
+
 export class CashRegisterRecordEntity {
   constructor(
     public id: number,
@@ -13,8 +22,7 @@ export class CashRegisterRecordEntity {
     public cashInOut?: CashInOutRecordEntity[],
     public createdAt?: Date,
     public updatedAt?: Date,
-    public transactionsCount?: number,
-    public cashInOutCount?: number
+    public summary?: CashRegisterSummary
   ) {}
 
   get isOpen(): boolean {
@@ -41,7 +49,7 @@ export class CashRegisterRecordEntity {
       cashInOut,
       createdAt,
       updatedAt,
-      _count,
+      summary,
     } = object;
 
     return new CashRegisterRecordEntity(
@@ -49,13 +57,12 @@ export class CashRegisterRecordEntity {
       status,
       opening ? OpeningEntity.fromObject(opening) : null,
       closing ? ClosingEntity.fromObject(closing) : null, // 👈 Pasa el objeto completo de Prisma
-      // En listados no se cargan transacciones ni movimientos (quedan undefined), solo sus conteos
+      // En listados no se cargan transacciones ni movimientos (quedan undefined), solo el resumen
       transactions ? transactions.map(TransactionRecordEntity.fromObject) : undefined,
       cashInOut ? cashInOut.map(CashInOutRecordEntity.fromObject) : undefined,
       createdAt ? new Date(createdAt) : undefined,
       updatedAt ? new Date(updatedAt) : undefined,
-      _count ? Number(_count.transactions) : transactions?.length,
-      _count ? Number(_count.cashInOut) : cashInOut?.length
+      summary
     );
   }
 }

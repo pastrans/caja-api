@@ -101,7 +101,7 @@ Hoy `OpenCashRegister` hace `findActive()` y luego `open()` sin transacción, y 
 - `PaginationDto` rechaza o recorta `limit` mayor a un máximo (ej. 100).
 - El listado de cajas no carga todas las transacciones de cada caja (solo un resumen o un endpoint aparte).
 
-> **Nota:** `limit > 100` responde 400. `GET /cash-registers` ya no incluye `transactions` ni `cashInOut`; devuelve `transactionsCount` y `cashInOutCount`. El detalle sigue en `GET /cash-registers/:id`.
+> **Nota:** `limit > 100` responde 400. `GET /cash-registers` ya no incluye `transactions` ni `cashInOut`; devuelve un `summary` por caja (`transactionsCount`, `totalTransactions`, `cashInOutCount`, `totalCashIn`, `totalCashOut`), calculado con `groupBy` en la BD. El detalle sigue en `GET /cash-registers/:id`.
 
 ### US-09 — Errores de base de datos con respuestas claras
 **Como** consumidor de la API (frontend), **quiero** recibir errores 4xx descriptivos en vez de 500, **para** mostrar mensajes útiles al usuario.

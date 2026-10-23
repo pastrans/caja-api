@@ -11,6 +11,7 @@ import {
   CustomError,
   PaginationDto,
   CashRegisterPaginatedResult,
+  CashRegisterSummary,
 } from '../../domain';
 
 export class CashRegisterRecordDatasourceImpl implements CashRegisterRecordDatasource {
@@ -21,12 +22,11 @@ export class CashRegisterRecordDatasourceImpl implements CashRegisterRecordDatas
     cashInOut: true,
   };
 
-  // Para listados: sin el detalle de transacciones/movimientos, solo cuántos hay.
+  // Para listados: sin el detalle de transacciones/movimientos (se agrega un resumen aparte).
   // El detalle completo se obtiene con findById (GET /cash-registers/:id)
   private readonly summaryIncludeQuery = {
     opening: { include: { user: true } },
     closing: { include: { user: true } },
-    _count: { select: { transactions: true, cashInOut: true } },
   };
 
   async open(openDto: OpenCashRegisterDto): Promise<CashRegisterRecordEntity> {
@@ -106,10 +106,56 @@ export class CashRegisterRecordDatasourceImpl implements CashRegisterRecordDatas
       }),
     ]);
 
+    const summaries = await this.getSummaries(records.map((record) => record.id));
+
     return {
       total,
-      records: records.map(CashRegisterRecordEntity.fromObject),
+      records: records.map((record) =>
+        CashRegisterRecordEntity.fromObject({ ...record, summary: summaries.get(record.id) })
+      ),
     };
+  }
+
+  // Conteos y totales por caja calculados en la BD (sin traer cada transacción)
+  private async getSummaries(ids: number[]): Promise<Map<number, CashRegisterSummary>> {
+    const where = { cashRegisterRecordId: { in: ids } };
+
+    const [transactionTotals, cashInOutTotals] = await Promise.all([
+      prisma.transactionRecord.groupBy({
+        by: ['cashRegisterRecordId'],
+        where,
+        _sum: { amountToCharge: true },
+        _count: { _all: true },
+      }),
+      prisma.cashInOutRecord.groupBy({
+        by: ['cashRegisterRecordId', 'type'],
+        where,
+        _sum: { amount: true },
+        _count: { _all: true },
+      }),
+    ]);
+
+    const summaries = new Map<number, CashRegisterSummary>(
+      ids.map((id) => [
+        id,
+        { transactionsCount: 0, totalTransactions: 0, cashInOutCount: 0, totalCashIn: 0, totalCashOut: 0 },
+      ])
+    );
+
+    for (const row of transactionTotals) {
+      const summary = summaries.get(row.cashRegisterRecordId)!;
+      summary.transactionsCount = row._count._all;
+      summary.totalTransactions = Number(row._sum.amountToCharge ?? 0);
+    }
+
+    for (const row of cashInOutTotals) {
+      const summary = summaries.get(row.cashRegisterRecordId)!;
+      summary.cashInOutCount += row._count._all;
+      if (row.type === 'IN') summary.totalCashIn = Number(row._sum.amount ?? 0);
+      else summary.totalCashOut = Number(row._sum.amount ?? 0);
+    }
+
+    return summaries;
   }
 
   async createTransaction(dto: CreateTransactionDto): Promise<TransactionRecordEntity> {
