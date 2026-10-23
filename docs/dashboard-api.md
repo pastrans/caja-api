@@ -68,26 +68,31 @@ Serie de ventas para gráficas. Devuelve un punto por periodo, incluidos los per
 | `from`       | No | Primer día del mes de `to` | Fecha inicial |
 | `to`         | No | Hoy | Fecha final |
 | `groupBy`    | No | `day` | `day`, `week` o `month` |
-| `employeeId` | No | — | Filtra las ventas de un empleado |
+| `employeeIds` | No | — | Filtra por uno o varios empleados: `employeeIds=1,2,3` (o el parámetro repetido) |
+| `employeeId` | No | — | Un solo empleado (se mantiene por compatibilidad; equivale a `employeeIds`) |
 
 - `period` es la fecha de inicio del periodo: el día, el lunes de la semana o el día 1 del mes. Con `week` o `month`, el primer periodo puede empezar antes de `from`, pero solo suma ventas dentro del rango.
 - Con `groupBy=day` el rango máximo es de 366 días.
+- `byEmployee` desglosa cada periodo por empleado (para barras apiladas). Solo incluye a los empleados con ventas en ese periodo; la suma de sus `total` es el `total` del periodo.
 
-Ejemplo: `GET /api/v1/dashboard/sales-over-time?from=2026-10-19&groupBy=day&employeeId=2`
+Ejemplo: `GET /api/v1/dashboard/sales-over-time?from=2026-10-19&groupBy=day&employeeIds=2,3`
 
 ```json
 {
   "from": "2026-10-19",
   "to": "2026-10-22",
   "groupBy": "day",
-  "employeeId": 2,
-  "total": 53,
-  "count": 2,
+  "employeeIds": [2, 3],
+  "total": 73,
+  "count": 3,
   "data": [
-    { "period": "2026-10-19", "total": 0, "count": 0 },
-    { "period": "2026-10-20", "total": 0, "count": 0 },
-    { "period": "2026-10-21", "total": 0, "count": 0 },
-    { "period": "2026-10-22", "total": 53, "count": 2 }
+    { "period": "2026-10-19", "total": 0, "count": 0, "byEmployee": [] },
+    { "period": "2026-10-20", "total": 0, "count": 0, "byEmployee": [] },
+    { "period": "2026-10-21", "total": 20, "count": 1, "byEmployee": [{ "employeeId": 3, "total": 20, "count": 1 }] },
+    {
+      "period": "2026-10-22", "total": 53, "count": 2,
+      "byEmployee": [{ "employeeId": 2, "total": 53, "count": 2 }]
+    }
   ]
 }
 ```
@@ -100,5 +105,5 @@ Responden `400 { "error": "..." }` cuando:
 - `from` o `to` no son fechas válidas.
 - `from` es posterior a `to`.
 - `groupBy` no es válido.
-- `employeeId` no es un entero positivo.
+- `employeeIds` (o `employeeId`) contiene algo que no es un entero positivo.
 - El rango excede 366 días con `groupBy=day`.
