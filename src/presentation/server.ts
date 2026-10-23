@@ -6,6 +6,8 @@ import express, { Router } from 'express';
 import compression from 'compression';
 import cors from 'cors';
 import path from 'path';
+import { CustomError } from '../domain';
+import { ErrorMiddleware } from './middlewares';
 
 interface Options {
   port: number;
@@ -41,7 +43,7 @@ export class Server {
             return callback(null, true);
           }
 
-          return callback(new Error(`Origin ${origin} not allowed by CORS`));
+          return callback(CustomError.forbidden(`Origin ${origin} not allowed by CORS`));
         },
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -62,9 +64,12 @@ export class Server {
 
     //* 5. SPA Fallback
     this.app.get('*', (req, res) => {
-      const indexPath = path.join(__dirname + `../../../${this.publicPath}/index.html`);
+      const indexPath = path.join(__dirname, '../../', this.publicPath, 'index.html');
       res.sendFile(indexPath);
     });
+
+    //* 6. Error handler (a nivel de app para capturar también errores de CORS y del body parser)
+    this.app.use(ErrorMiddleware.handleError);
 
     this.app.listen(this.port, () => {
       console.log(`Server running on port ${this.port}`);

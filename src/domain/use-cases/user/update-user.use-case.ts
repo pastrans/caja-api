@@ -1,7 +1,6 @@
 import { UpdateUserDto } from '../../dtos';
 import { UserEntity } from '../../entities';
 import { UserRepository } from '../../repositories';
-import { CustomError } from '../../errors/custom.error';
 import { bcryptAdapter } from '../../../config';
 
 export interface UpdateUserUseCase {
@@ -15,11 +14,8 @@ export class UpdateUser implements UpdateUserUseCase {
   ) {}
 
   async execute(dto: UpdateUserDto): Promise<UserEntity> {
-    // 1. Validar existencia del usuario
-    const userExists = await this.repository.findById(dto.id);
-    if (!userExists) {
-      throw CustomError.notFound(`User with id ${dto.id} not found`);
-    }
+    // 1. Validar existencia del usuario (findById lanza 404 si no existe)
+    await this.repository.findById(dto.id);
 
     // 2. Hashear contraseña solo si fue provista
     let password = dto.password;

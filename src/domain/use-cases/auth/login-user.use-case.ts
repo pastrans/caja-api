@@ -1,7 +1,7 @@
 import { LoginUserDto } from '../../dtos';
 import { UserEntity } from '../../entities';
 import { UserRepository } from '../../repositories';
-import { bcryptAdapter, JwtAdapter } from '../../../config';
+import { bcryptAdapter, JwtAdapter, TokenPurpose } from '../../../config';
 import { CustomError } from '../../errors/custom.error';
 
 export interface UserAuthResponse {
@@ -35,7 +35,7 @@ export class LoginUser implements LoginUserUseCase {
     if (!isMatching) throw CustomError.badRequest('Invalid credentials');
 
     // 4. Generar Token
-    const token = await JwtAdapter.generateToken({ id: user.id, role: user.role });
+    const token = await JwtAdapter.generateToken({ id: user.id, role: user.role, purpose: TokenPurpose.SESSION });
     if (!token) throw CustomError.internalServer('Error generating JWT'); 
 
     return {

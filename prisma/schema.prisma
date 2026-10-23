@@ -43,16 +43,16 @@ model User {
   updatedAt DateTime @updatedAt
 
   // Relaciones de auditoría (quién abrió y quién cerró la caja)
-  openings  Opening[]
-  closings  Closing[]
+  openings Opening[]
+  closings Closing[]
 }
 
 model Employee {
-  id           Int                 @id @default(autoincrement())
-  name         String
-  available    Boolean            @default(true)
-  createdAt    DateTime            @default(now())
-  updatedAt    DateTime            @updatedAt
+  id        Int      @id @default(autoincrement())
+  name      String
+  available Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relación con transacciones
   transactions TransactionRecord[]
@@ -63,14 +63,14 @@ model Employee {
 // ----------------------------------------------------
 
 model CashRegisterRecord {
-  id           Int                 @id @default(autoincrement())
-  status       CashRegisterStatus  @default(OPEN)
-  createdAt    DateTime            @default(now())
-  updatedAt    DateTime            @updatedAt
+  id        Int                @id @default(autoincrement())
+  status    CashRegisterStatus @default(OPEN)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
 
   // 1-to-1 Relations
-  opening      Opening?
-  closing      Closing?
+  opening Opening?
+  closing Closing?
 
   // 1-to-N Relations
   transactions TransactionRecord[]
@@ -78,64 +78,64 @@ model CashRegisterRecord {
 }
 
 model Opening {
-  id                   Int                @id @default(autoincrement())
-  date                 DateTime           @default(now())
-  cash                 Float
-  note                 String?
-  denominations        Json?               // Structure: [{ value: number, quantity: number }
+  id            Int      @id @default(autoincrement())
+  date          DateTime @default(now())
+  cash          Decimal  @db.Decimal(12, 2)
+  note          String?
+  denominations Json? // Structure: [{ value: number, quantity: number }
 
   // Foreign Key for CashRegisterRecord (1-to-1)
   cashRegisterRecordId Int                @unique
   cashRegisterRecord   CashRegisterRecord @relation(fields: [cashRegisterRecordId], references: [id], onDelete: Cascade)
 
   // Relación con el Usuario que realiza la apertura
-  userId               Int
-  user                 User               @relation(fields: [userId], references: [id])
+  userId Int
+  user   User @relation(fields: [userId], references: [id])
 }
 
 model Closing {
-  id                   Int                @id @default(autoincrement())
-  cashRegisterRecordId Int                @unique
-  cashProvided         Float
-  difference           Float
-  totalTransactions    Float
-  totalCashInOut       Float
-  totalExpected        Float
+  id                   Int      @id @default(autoincrement())
+  cashRegisterRecordId Int      @unique
+  cashProvided         Decimal  @db.Decimal(12, 2)
+  difference           Decimal  @db.Decimal(12, 2)
+  totalTransactions    Decimal  @db.Decimal(12, 2)
+  totalCashInOut       Decimal  @db.Decimal(12, 2)
+  totalExpected        Decimal  @db.Decimal(12, 2)
   userId               Int
   denominations        Json?
   note                 String?
-  createdAt            DateTime           @default(now())
+  createdAt            DateTime @default(now())
 
-  cashRegisterRecord   CashRegisterRecord @relation(fields: [cashRegisterRecordId], references: [id])
-  user                 User               @relation(fields: [userId], references: [id])
+  cashRegisterRecord CashRegisterRecord @relation(fields: [cashRegisterRecordId], references: [id], onDelete: Cascade)
+  user               User               @relation(fields: [userId], references: [id])
 }
 
 model CashInOutRecord {
-  id                   Int                @id @default(autoincrement())
-  type                 CashInOutType
-  amount               Float
-  reason               String
-  date                 DateTime           @default(now())
-  note                 String?
+  id     Int           @id @default(autoincrement())
+  type   CashInOutType
+  amount Decimal       @db.Decimal(12, 2)
+  reason String
+  date   DateTime      @default(now())
+  note   String?
 
   cashRegisterRecordId Int
   cashRegisterRecord   CashRegisterRecord @relation(fields: [cashRegisterRecordId], references: [id], onDelete: Cascade)
 }
 
 model TransactionRecord {
-  id                   Int                @id @default(autoincrement())
-  date                 DateTime           @default(now())
-  amountToCharge       Float
-  cashProvided         Float
-  changeReturned       Float
-  note                 String?
-  denominations        Json?               // Structure: [{ value: number, quantity: number }]
+  id             Int      @id @default(autoincrement())
+  date           DateTime @default(now())
+  amountToCharge Decimal  @db.Decimal(12, 2)
+  cashProvided   Decimal  @db.Decimal(12, 2)
+  changeReturned Decimal  @db.Decimal(12, 2)
+  note           String?
+  denominations  Json? // Structure: [{ value: number, quantity: number }]
 
   // Relación con CashRegisterRecord
   cashRegisterRecordId Int
   cashRegisterRecord   CashRegisterRecord @relation(fields: [cashRegisterRecordId], references: [id], onDelete: Cascade)
 
   // Relación con Employee
-  employeeId           Int
-  employee             Employee           @relation(fields: [employeeId], references: [id])
+  employeeId Int
+  employee   Employee @relation(fields: [employeeId], references: [id])
 }

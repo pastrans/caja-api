@@ -1,3 +1,4 @@
+import { CustomError } from '../errors/custom.error';
 export class UserEntity {
   constructor(
     public id: number,
@@ -18,9 +19,9 @@ export class UserEntity {
   public static fromObject(object: { [key: string]: any }): UserEntity {
     const { id, name, email, password, role, available, createdAt, updatedAt } = object;
 
-    if (!id) throw 'User ID is required';
-    if (!name) throw 'User name is required';
-    if (!email) throw 'User email is required';
+    if (!id) throw CustomError.internalServer('User ID is required');
+    if (!name) throw CustomError.internalServer('User name is required');
+    if (!email) throw CustomError.internalServer('User email is required');
 
     return new UserEntity(
       Number(id),

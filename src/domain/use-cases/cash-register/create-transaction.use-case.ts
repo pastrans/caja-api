@@ -14,11 +14,8 @@ export class CreateTransaction implements CreateTransactionUseCase {
   ) {}
 
   async execute(dto: CreateTransactionDto): Promise<TransactionRecordEntity> {
-    // 1. Validar que la caja exista
+    // 1. Validar que la caja exista (findById lanza 404 si no existe)
     const cashRegister = await this.cashRegisterRepository.findById(dto.cashRegisterRecordId);
-    if (!cashRegister) {
-      throw CustomError.notFound(`Cash register record with ID ${dto.cashRegisterRecordId} not found`);
-    }
 
     // 2. Validar que la caja NO esté cerrada
     if (cashRegister.status === 'CLOSED') {

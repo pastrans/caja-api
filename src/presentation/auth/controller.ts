@@ -27,12 +27,10 @@ export class AuthController {
 
       new ForgotPassword(this.userRepository, this.emailService, this.frontendUrl)
         .execute(email)
-        .then( (wasSent) =>
+        .then(() =>
           res.json({
-            message: wasSent
-              ? 'Email was sent, check your inbox'
-              : 'Email was not sent',
-           }) )  
+            message: 'If the email is registered, you will receive a link to reset your password',
+          }) )
         .catch(next);
   }
   

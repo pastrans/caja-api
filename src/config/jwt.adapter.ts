@@ -4,6 +4,11 @@ import { envs } from './envs';
 
 const JWT_SEED = envs.JWT_SEED;
 
+// Propósito del token: un token de reset no sirve como sesión y viceversa
+export const TokenPurpose = {
+  SESSION: 'session',
+  RESET_PASSWORD: 'reset-password',
+} as const;
 
 
 export class JwtAdapter {

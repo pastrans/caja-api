@@ -12,7 +12,9 @@ export class CashRegisterRecordEntity {
     public transactions?: TransactionRecordEntity[],
     public cashInOut?: CashInOutRecordEntity[],
     public createdAt?: Date,
-    public updatedAt?: Date
+    public updatedAt?: Date,
+    public transactionsCount?: number,
+    public cashInOutCount?: number
   ) {}
 
   get isOpen(): boolean {
@@ -39,6 +41,7 @@ export class CashRegisterRecordEntity {
       cashInOut,
       createdAt,
       updatedAt,
+      _count,
     } = object;
 
     return new CashRegisterRecordEntity(
@@ -46,10 +49,13 @@ export class CashRegisterRecordEntity {
       status,
       opening ? OpeningEntity.fromObject(opening) : null,
       closing ? ClosingEntity.fromObject(closing) : null, // 👈 Pasa el objeto completo de Prisma
-      transactions ? transactions.map(TransactionRecordEntity.fromObject) : [],
-      cashInOut ? cashInOut.map(CashInOutRecordEntity.fromObject) : [],
+      // En listados no se cargan transacciones ni movimientos (quedan undefined), solo sus conteos
+      transactions ? transactions.map(TransactionRecordEntity.fromObject) : undefined,
+      cashInOut ? cashInOut.map(CashInOutRecordEntity.fromObject) : undefined,
       createdAt ? new Date(createdAt) : undefined,
-      updatedAt ? new Date(updatedAt) : undefined
+      updatedAt ? new Date(updatedAt) : undefined,
+      _count ? Number(_count.transactions) : transactions?.length,
+      _count ? Number(_count.cashInOut) : cashInOut?.length
     );
   }
 }

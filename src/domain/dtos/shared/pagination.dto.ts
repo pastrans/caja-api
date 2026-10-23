@@ -1,4 +1,6 @@
 export class PaginationDto {
+  static readonly MAX_LIMIT = 100;
+
   private constructor(
     public readonly page: number,
     public readonly limit: number,
@@ -9,8 +11,9 @@ export class PaginationDto {
     const page = Number(props.page || 1);
     const limit = Number(props.limit || 10);
 
-    if (isNaN(page) || page <= 0) return ['Page must be a number greater than 0', undefined];
-    if (isNaN(limit) || limit <= 0) return ['Limit must be a number greater than 0', undefined];
+    if (!Number.isInteger(page) || page <= 0) return ['Page must be an integer greater than 0', undefined];
+    if (!Number.isInteger(limit) || limit <= 0) return ['Limit must be an integer greater than 0', undefined];
+    if (limit > PaginationDto.MAX_LIMIT) return [`Limit must be less than or equal to ${PaginationDto.MAX_LIMIT}`, undefined];
 
     // Mapeo flexible de booleano: 'true', true -> true | 'false', false -> false
     let isAvailable: boolean | undefined = undefined;

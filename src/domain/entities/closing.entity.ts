@@ -1,3 +1,4 @@
+import { CustomError } from '../errors/custom.error';
 import { UserEntity } from './user.entity';
 
 export class ClosingEntity {
@@ -30,9 +31,9 @@ export class ClosingEntity {
       createdAt,
     } = object;
 
-    if (!id) throw 'Closing ID is required';
-    if (cashProvided === undefined) throw 'Closing cashProvided is required';
-    if (difference === undefined) throw 'Closing difference is required';
+    if (!id) throw CustomError.internalServer('Closing ID is required');
+    if (cashProvided === undefined) throw CustomError.internalServer('Closing cashProvided is required');
+    if (difference === undefined) throw CustomError.internalServer('Closing difference is required');
 
     return new ClosingEntity(
       Number(id),

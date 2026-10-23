@@ -24,7 +24,7 @@ export class CashRegistersController {
   ) {}
 
   public openCashRegister = (req: Request, res: Response, next: NextFunction) => {
-    const user = req.body.user;
+    const user = req.user!;
 
     const [error, openDto] = OpenCashRegisterDto.create({
       ...req.body,
@@ -39,7 +39,7 @@ export class CashRegistersController {
   };
 
   public closeCashRegister = (req: Request, res: Response, next: NextFunction) => {
-    const user = req.body.user;
+    const user = req.user!;
 
     const [error, closeDto] = CloseCashRegisterDto.create({
       ...req.body,

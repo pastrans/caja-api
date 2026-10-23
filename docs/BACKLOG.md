@@ -6,21 +6,21 @@ Pendientes detectados en el análisis del proyecto (octubre 2026), escritos como
 
 | ID | Historia | Prioridad | Estado |
 |----|----------|-----------|--------|
-| US-01 | Separar tokens de sesión y de reset de contraseña | 🔴 | Pendiente |
-| US-02 | No exponer credenciales de BD en logs | 🔴 | Pendiente |
+| US-01 | Separar tokens de sesión y de reset de contraseña | 🔴 | ✅ Hecho (rama `staging`) |
+| US-02 | No exponer credenciales de BD en logs | 🔴 | ✅ Hecho (rama `staging`) |
 | US-03 | Apertura y cierre de caja atómicos | 🔴 | Pendiente |
-| US-04 | Montos con precisión decimal | 🔴 | Pendiente |
-| US-05 | Evitar enumeración de usuarios en "olvidé mi contraseña" | 🔴 | Pendiente |
+| US-04 | Montos con precisión decimal | 🔴 | ✅ Hecho (rama `staging`) |
+| US-05 | Evitar enumeración de usuarios en "olvidé mi contraseña" | 🔴 | ✅ Hecho (rama `staging`) |
 | US-06 | Protección contra fuerza bruta y cabeceras seguras | 🔴 | Pendiente |
-| US-07 | Corregir `.env.template` y configuración local | 🟡 | Pendiente |
-| US-08 | Límite máximo en la paginación | 🟡 | Pendiente |
-| US-09 | Errores de base de datos con respuestas claras | 🟡 | Pendiente |
+| US-07 | Corregir `.env.template` y configuración local | 🟡 | ✅ Hecho (rama `staging`) |
+| US-08 | Límite máximo en la paginación | 🟡 | ✅ Hecho (rama `staging`) |
+| US-09 | Errores de base de datos con respuestas claras | 🟡 | ✅ Hecho (rama `staging`) |
 | US-10 | Emails normalizados y validados | 🟡 | Pendiente |
-| US-11 | 404 en JSON para rutas `/api` inexistentes | 🟡 | Pendiente |
+| US-11 | 404 en JSON para rutas `/api` inexistentes | 🟡 | ✅ Hecho (rama `staging`) |
 | US-12 | Email opcional en desarrollo | 🟡 | Pendiente |
-| US-13 | Usuario autenticado en `req.user` | 🟢 | Pendiente |
+| US-13 | Usuario autenticado en `req.user` | 🟢 | ✅ Hecho (rama `staging`) |
 | US-14 | Respetar la regla de dependencias de Clean Architecture | 🟢 | Pendiente |
-| US-15 | Limpiar código muerto y restos de la plantilla | 🟢 | Pendiente |
+| US-15 | Limpiar código muerto y restos de la plantilla | 🟢 | ✅ Hecho (rama `staging`) |
 | US-16 | Tests automatizados y linter | 🟢 | Pendiente |
 | US-17 | Despliegue con Docker y scripts de producción | 🟢 | Pendiente |
 | US-18 | Dashboard de ventas | — | ✅ Hecho (rama `staging`) |
@@ -39,6 +39,8 @@ Hoy ambos tokens se firman con el mismo `JWT_SEED` y el mismo payload `{ id }`, 
 - `AuthMiddleware` rechaza tokens de reset.
 - `/auth/reset-password/:token` rechaza tokens de sesión.
 - El token de reset es de un solo uso: deja de ser válido tras cambiar la contraseña (ej. incluir un hash parcial de la contraseña actual en el token).
+
+> **Nota:** los tokens de sesión ahora llevan `purpose: 'session'` y el middleware lo exige, así que los tokens emitidos antes del cambio dejan de valer (hay que volver a iniciar sesión una vez).
 
 ### US-02 — No exponer credenciales de BD en logs
 **Como** responsable de la infraestructura, **quiero** que la API no imprima la cadena de conexión de la base de datos, **para** que el usuario y la contraseña no queden en los logs del servidor.
@@ -99,6 +101,8 @@ Hoy `OpenCashRegister` hace `findActive()` y luego `open()` sin transacción, y 
 - `PaginationDto` rechaza o recorta `limit` mayor a un máximo (ej. 100).
 - El listado de cajas no carga todas las transacciones de cada caja (solo un resumen o un endpoint aparte).
 
+> **Nota:** `limit > 100` responde 400. `GET /cash-registers` ya no incluye `transactions` ni `cashInOut`; devuelve `transactionsCount` y `cashInOutCount`. El detalle sigue en `GET /cash-registers/:id`.
+
 ### US-09 — Errores de base de datos con respuestas claras
 **Como** consumidor de la API (frontend), **quiero** recibir errores 4xx descriptivos en vez de 500, **para** mostrar mensajes útiles al usuario.
 
@@ -154,6 +158,8 @@ Hoy `OpenCashRegister` hace `findActive()` y luego `open()` sin transacción, y 
 - Se evalúa eliminar la migración `todo` de 2023.
 - Se eliminan los `if (!record)` que nunca se cumplen porque `findById` ya lanza `notFound`.
 - `Closing` usa `onDelete: Cascade` como las demás relaciones de `CashRegisterRecord`.
+
+> **Decisión:** la migración `20230904201308_init` (tabla `todo`) se conserva. Ya está aplicada en las BD existentes y borrarla rompe el historial de `prisma migrate`; la migración siguiente ya elimina la tabla.
 
 ### US-16 — Tests automatizados y linter
 **Como** desarrollador, **quiero** tener tests y un linter, **para** hacer cambios sin miedo a romper la lógica de caja.

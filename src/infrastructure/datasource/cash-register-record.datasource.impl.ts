@@ -21,6 +21,14 @@ export class CashRegisterRecordDatasourceImpl implements CashRegisterRecordDatas
     cashInOut: true,
   };
 
+  // Para listados: sin el detalle de transacciones/movimientos, solo cuántos hay.
+  // El detalle completo se obtiene con findById (GET /cash-registers/:id)
+  private readonly summaryIncludeQuery = {
+    opening: { include: { user: true } },
+    closing: { include: { user: true } },
+    _count: { select: { transactions: true, cashInOut: true } },
+  };
+
   async open(openDto: OpenCashRegisterDto): Promise<CashRegisterRecordEntity> {
     const record = await prisma.cashRegisterRecord.create({
       data: {
@@ -93,7 +101,7 @@ export class CashRegisterRecordDatasourceImpl implements CashRegisterRecordDatas
       prisma.cashRegisterRecord.findMany({
         skip: (page - 1) * limit,
         take: limit,
-        include: this.includeQuery,
+        include: this.summaryIncludeQuery,
         orderBy: { createdAt: 'desc' },
       }),
     ]);

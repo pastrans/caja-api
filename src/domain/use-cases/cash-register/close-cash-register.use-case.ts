@@ -12,11 +12,8 @@ export class CloseCashRegister implements CloseCashRegisterUseCase {
   constructor(private readonly repository: CashRegisterRecordRepository) {}
 
   async execute(dto: CloseCashRegisterDto): Promise<CashRegisterRecordEntity> {
-    // 1. Obtener la caja registrada
+    // 1. Obtener la caja registrada (findById lanza 404 si no existe)
     const record = await this.repository.findById(dto.cashRegisterRecordId);
-    if (!record) {
-      throw CustomError.notFound(`Cash register record with ID ${dto.cashRegisterRecordId} not found`);
-    }
 
     // 2. Verificar que la caja esté ABIERTA
     if (record.status !== 'OPEN') {

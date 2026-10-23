@@ -1,3 +1,4 @@
+import { CustomError } from '../errors/custom.error';
 export class EmployeeEntity {
   constructor(
     public id: number,
@@ -10,8 +11,8 @@ export class EmployeeEntity {
   public static fromObject(object: { [key: string]: any }): EmployeeEntity {
     const { id, name, available, createdAt, updatedAt } = object;
 
-    if (!id) throw 'Employee ID is required';
-    if (!name) throw 'Employee name is required';
+    if (!id) throw CustomError.internalServer('Employee ID is required');
+    if (!name) throw CustomError.internalServer('Employee name is required');
 
     return new EmployeeEntity(
       Number(id),
