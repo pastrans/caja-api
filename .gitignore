@@ -7,3 +7,5 @@ keys/
 /postgres
 
 dist/
+# Backups de la base de datos (contienen datos personales: nunca subirlos)
+/backups/
