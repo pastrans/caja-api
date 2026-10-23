@@ -46,15 +46,21 @@ export interface SalesByEmployee {
   employees: EmployeeSales[];
 }
 
+// Ventas de un empleado dentro de un periodo (segmentos de la barra apilada)
+export interface EmployeeSalesPoint extends SalesTotals {
+  employeeId: number;
+}
+
 export interface SalesTimePoint extends SalesTotals {
   period: string; // Fecha de inicio del periodo (YYYY-MM-DD)
+  byEmployee: EmployeeSalesPoint[]; // Solo empleados con ventas en el periodo
 }
 
 export interface SalesOverTime {
   from: string;
   to: string;
   groupBy: SalesGroupBy;
-  employeeId: number | null;
+  employeeIds: number[] | null;
   total: number;
   count: number;
   data: SalesTimePoint[];

@@ -9,12 +9,12 @@ export class SalesReportDto {
     public readonly from: string,
     public readonly to: string,
     public readonly groupBy: SalesGroupBy,
-    public readonly employeeId: number | null,
+    public readonly employeeIds: number[] | null,
   ) {}
 
   // Si no se envían fechas, el rango por defecto es el mes en curso (del día 1 a hoy)
   static create(props: { [key: string]: any }, timezone: string): [string, undefined] | [undefined, SalesReportDto] {
-    const { from, to, groupBy = 'day', employeeId } = props;
+    const { from, to, groupBy = 'day', employeeId, employeeIds } = props;
 
     const today = DateHelper.today(timezone);
     const toDate = to ?? today;
@@ -32,14 +32,16 @@ export class SalesReportDto {
       return [`Date range cannot exceed ${MAX_DAYS_BY_DAY} days when grouping by day`, undefined];
     }
 
-    let employeeIdNum: number | null = null;
-    if (employeeId !== undefined) {
-      employeeIdNum = Number(employeeId);
-      if (!Number.isInteger(employeeIdNum) || employeeIdNum <= 0) {
-        return ['employeeId must be a valid positive integer', undefined];
-      }
+    // employeeIds acepta "1,2,3" o el parámetro repetido; employeeId (uno solo) se mantiene por compatibilidad
+    const rawIds: unknown[] = [employeeIds, employeeId]
+      .filter((value) => value !== undefined && value !== '')
+      .flatMap((value) => (Array.isArray(value) ? value : String(value).split(',')));
+
+    const ids = [...new Set(rawIds.map((value) => Number(String(value).trim())))];
+    if (ids.some((id) => !Number.isInteger(id) || id <= 0)) {
+      return ['employeeIds must be a comma-separated list of positive integers', undefined];
     }
 
-    return [undefined, new SalesReportDto(fromDate, toDate, groupBy, employeeIdNum)];
+    return [undefined, new SalesReportDto(fromDate, toDate, groupBy, ids.length > 0 ? ids : null)];
   }
 }

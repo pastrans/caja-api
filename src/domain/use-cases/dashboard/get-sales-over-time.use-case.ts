@@ -18,7 +18,7 @@ export class GetSalesOverTime implements GetSalesOverTimeUseCase {
       from: dto.from,
       to: dto.to,
       groupBy: dto.groupBy,
-      employeeId: dto.employeeId,
+      employeeIds: dto.employeeIds,
       total,
       count,
       data,

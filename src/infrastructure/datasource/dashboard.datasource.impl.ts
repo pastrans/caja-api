@@ -6,6 +6,7 @@ import {
   SalesSummaryRaw,
   SalesTimePoint,
 } from '../../domain';
+import { SalesCalculatorHelper } from '../../domain/helpers/sales-calculator.helper';
 
 // Las fechas se guardan en UTC (timestamp sin zona). Para agrupar por día/semana/mes
 // se convierten a la zona horaria del negocio: "date" AT TIME ZONE 'UTC' AT TIME ZONE tz.
@@ -84,12 +85,15 @@ export class DashboardDatasourceImpl implements DashboardDatasource {
     }));
   }
 
-  // Devuelve un punto por periodo, incluidos los periodos sin ventas (total 0)
+  // Devuelve un punto por periodo, incluidos los periodos sin ventas (total 0),
+  // con el desglose por empleado para las barras apiladas
   async getSalesOverTime(dto: SalesReportDto): Promise<SalesTimePoint[]> {
     const tz = this.timezone;
-    const { groupBy, employeeId } = dto;
+    const { groupBy, employeeIds } = dto;
 
-    const rows = await prisma.$queryRaw<{ period: string; total: number; count: number }[]>`
+    const rows = await prisma.$queryRaw<
+      { period: string; employeeId: number | null; total: number; count: number }[]
+    >`
       WITH periods AS (
         SELECT generate_series(
           date_trunc(${groupBy}, ${dto.from}::date::timestamp),
@@ -100,26 +104,38 @@ export class DashboardDatasourceImpl implements DashboardDatasource {
       sales AS (
         SELECT
           date_trunc(${groupBy}, t."date" AT TIME ZONE 'UTC' AT TIME ZONE ${tz}) AS period_start,
+          t."employeeId" AS employee_id,
           t."amountToCharge" AS amount
         FROM "TransactionRecord" t
         WHERE t."date" >= (${dto.from}::date::timestamp AT TIME ZONE ${tz}) AT TIME ZONE 'UTC'
           AND t."date" <  ((${dto.to}::date + 1)::timestamp AT TIME ZONE ${tz}) AT TIME ZONE 'UTC'
-          AND (${employeeId}::int IS NULL OR t."employeeId" = ${employeeId}::int)
+          AND (${employeeIds}::int[] IS NULL OR t."employeeId" = ANY(${employeeIds}::int[]))
       )
       SELECT
         to_char(p.period_start, 'YYYY-MM-DD') AS "period",
+        s.employee_id AS "employeeId",
         COALESCE(ROUND(SUM(s.amount)::numeric, 2), 0)::float8 AS "total",
         COUNT(s.amount)::int AS "count"
       FROM periods p
       LEFT JOIN sales s ON s.period_start = p.period_start
-      GROUP BY p.period_start
-      ORDER BY p.period_start
+      GROUP BY p.period_start, s.employee_id
+      ORDER BY p.period_start, s.employee_id
     `;
 
-    return rows.map((row) => ({
-      period: row.period,
-      total: Number(row.total),
-      count: Number(row.count),
-    }));
+    // Una fila por (periodo, empleado); los periodos sin ventas llegan con employeeId null
+    const points = new Map<string, SalesTimePoint>();
+    for (const row of rows) {
+      const point = points.get(row.period) ?? { period: row.period, total: 0, count: 0, byEmployee: [] };
+      points.set(row.period, point);
+      if (row.employeeId === null) continue;
+
+      const total = Number(row.total);
+      const count = Number(row.count);
+      point.byEmployee.push({ employeeId: Number(row.employeeId), total, count });
+      point.total = SalesCalculatorHelper.round(point.total + total);
+      point.count += count;
+    }
+
+    return [...points.values()];
   }
 }
