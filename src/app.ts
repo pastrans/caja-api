@@ -17,6 +17,7 @@ function main() {
     public_path: envs.PUBLIC_PATH,
     routes: AppRoutes.routes,
     acceptedOrigins: envs.ACCEPTED_ORIGINS,
+    trustProxy: envs.TRUST_PROXY,
   });
 
   

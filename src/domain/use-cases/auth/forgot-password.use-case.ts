@@ -1,6 +1,6 @@
 import { UserRepository } from '../../repositories';
-import { EmailService } from '../../../infrastructure';
-import { bcryptAdapter, JwtAdapter, TokenPurpose } from '../../../config';
+import { EmailSender } from '../../interfaces/email-sender.interface';
+import { PasswordFingerprint, SignToken, TokenPurpose } from '../../interfaces/auth-adapters.interface';
 
 export interface ForgotPasswordUseCase {
   execute(email: string): Promise<void>;
@@ -9,8 +9,10 @@ export interface ForgotPasswordUseCase {
 export class ForgotPassword implements ForgotPasswordUseCase {
   constructor(
     private readonly userRepository: UserRepository,
-    private readonly emailService: EmailService,
-    private readonly frontendUrl: string
+    private readonly emailSender: EmailSender,
+    private readonly frontendUrl: string,
+    private readonly signToken: SignToken,
+    private readonly fingerprint: PasswordFingerprint
   ) {}
 
   // No revela si el email existe: el controlador responde siempre lo mismo
@@ -20,11 +22,11 @@ export class ForgotPassword implements ForgotPasswordUseCase {
 
     // Token con expiración corta (15 minutos) y de un solo uso:
     // la huella del hash actual deja de coincidir en cuanto cambia la contraseña
-    const resetToken = await JwtAdapter.generateToken(
+    const resetToken = await this.signToken(
       {
         id: user.id,
         purpose: TokenPurpose.RESET_PASSWORD,
-        pwd: bcryptAdapter.fingerprint(user.password!),
+        pwd: this.fingerprint(user.password!),
       },
       '15m'
     );
@@ -39,7 +41,7 @@ export class ForgotPassword implements ForgotPasswordUseCase {
     `;
 
     // Sin await: el tiempo de respuesta no debe delatar si se envió un correo
-    void this.emailService.sendEmail({
+    void this.emailSender.sendEmail({
       to: user.email,
       subject: 'Restablecer contraseña',
       htmlBody,

@@ -1,10 +1,5 @@
 import sgMail from '@sendgrid/mail';
-
-export interface SendMailOptions {
-  to: string | string[];
-  subject: string;
-  htmlBody: string;
-}
+import { EmailSender, SendMailOptions } from '../../domain';
 
 export interface EmailServiceOptions {
   apiKey: string;
@@ -13,7 +8,7 @@ export interface EmailServiceOptions {
   postToProvider: boolean;
 }
 
-export class EmailService {
+export class EmailService implements EmailSender {
   private readonly mailerEmail: string;
   private readonly senderName: string;
   private readonly postToProvider: boolean;
@@ -30,7 +25,8 @@ export class EmailService {
     this.senderName = senderName;
     this.postToProvider = postToProvider;
 
-    sgMail.setApiKey(apiKey);
+    // Sin envío real no se configura SendGrid (la API key puede venir vacía en desarrollo)
+    if (postToProvider) sgMail.setApiKey(apiKey);
   }
 
   async sendEmail(options: SendMailOptions): Promise<boolean> {

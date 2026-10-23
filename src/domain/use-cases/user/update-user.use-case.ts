@@ -1,7 +1,7 @@
 import { UpdateUserDto } from '../../dtos';
 import { UserEntity } from '../../entities';
 import { UserRepository } from '../../repositories';
-import { bcryptAdapter } from '../../../config';
+import { HashPassword } from '../../interfaces/auth-adapters.interface';
 
 export interface UpdateUserUseCase {
   execute(dto: UpdateUserDto): Promise<UserEntity>;
@@ -10,7 +10,7 @@ export interface UpdateUserUseCase {
 export class UpdateUser implements UpdateUserUseCase {
   constructor(
     private readonly repository: UserRepository,
-    private readonly hashPassword: (password: string) => string = bcryptAdapter.hash
+    private readonly hashPassword: HashPassword
   ) {}
 
   async execute(dto: UpdateUserDto): Promise<UserEntity> {

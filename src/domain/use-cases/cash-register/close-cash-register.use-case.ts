@@ -12,10 +12,14 @@ export class CloseCashRegister implements CloseCashRegisterUseCase {
   constructor(private readonly repository: CashRegisterRecordRepository) {}
 
   async execute(dto: CloseCashRegisterDto): Promise<CashRegisterRecordEntity> {
-    // 1. Obtener la caja registrada (findById lanza 404 si no existe)
-    const record = await this.repository.findById(dto.cashRegisterRecordId);
+    // El repositorio bloquea la caja y ejecuta validate dentro de la misma transacción,
+    // así ninguna venta nueva puede colarse entre el cálculo del balance y el cierre
+    const closedRecord = await this.repository.close(dto, (record) => this.validate(record, dto));
+    return closedRecord.sanitize();
+  }
 
-    // 2. Verificar que la caja esté ABIERTA
+  private validate(record: CashRegisterRecordEntity, dto: CloseCashRegisterDto): void {
+    // 1. Verificar que la caja esté ABIERTA
     if (record.status !== 'OPEN') {
       throw CustomError.badRequest('Cash register is already closed');
     }
@@ -24,7 +28,7 @@ export class CloseCashRegister implements CloseCashRegisterUseCase {
       throw CustomError.internalServer('Cash register opening data is missing');
     }
 
-    // 3. Calcular montos reales del sistema usando el helper
+    // 2. Calcular montos reales del sistema usando el helper
     const openingCash = record.opening.cash;
     const balance = CashCalculatorHelper.calculateBalance(
       openingCash,
@@ -33,7 +37,7 @@ export class CloseCashRegister implements CloseCashRegisterUseCase {
       dto.cashProvided
     );
 
-    // 4. Validar auditablemente que los totales enviados coincidan con el sistema
+    // 3. Validar auditablemente que los totales enviados coincidan con el sistema
     if (dto.totalTransactions !== balance.totalTransactions) {
       throw CustomError.badRequest(
         `totalTransactions mismatch. Expected ${balance.totalTransactions}, but received ${dto.totalTransactions}`
@@ -57,9 +61,5 @@ export class CloseCashRegister implements CloseCashRegisterUseCase {
         `difference mismatch. Expected ${balance.difference}, but received ${dto.difference}`
       );
     }
-
-    // 5. Persistir el cierre y sanitizar respuesta
-    const closedRecord = await this.repository.close(dto);
-    return closedRecord.sanitize();
   }
 }

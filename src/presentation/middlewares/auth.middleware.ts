@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { JwtAdapter, TokenPurpose } from '../../config';
-import { CustomError, UserRepository } from '../../domain';
+import { JwtAdapter } from '../../config';
+import { CustomError, TokenPurpose, UserRepository } from '../../domain';
 
 export class AuthMiddleware {
   static validateJWT = (userRepository: UserRepository, ...validRoles: string[]) => {

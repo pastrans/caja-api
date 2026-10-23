@@ -1,4 +1,3 @@
-import { regularExps } from '../../../config';
 
 
 

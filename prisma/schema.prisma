@@ -6,7 +6,8 @@ datasource db {
 }
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["partialIndexes"]
 }
 
 // ----------------------------------------------------
@@ -75,6 +76,9 @@ model CashRegisterRecord {
   // 1-to-N Relations
   transactions TransactionRecord[]
   cashInOut    CashInOutRecord[]
+
+  // Solo puede existir una caja abierta a la vez (índice único parcial)
+  @@unique([status], map: "CashRegisterRecord_single_open_key", where: raw("status = 'OPEN'"))
 }
 
 model Opening {

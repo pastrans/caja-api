@@ -4,6 +4,7 @@ dns.setDefaultResultOrder('ipv4first');
 
 import express, { Router } from 'express';
 import compression from 'compression';
+import helmet from 'helmet';
 import cors from 'cors';
 import path from 'path';
 import { CustomError } from '../domain';
@@ -14,6 +15,7 @@ interface Options {
   routes: Router;
   public_path?: string;
   acceptedOrigins?: string[]; // 👈 Lista de orígenes permitidos
+  trustProxy?: number; // Proxies delante de la API (para obtener la IP real del cliente)
 }
 
 export class Server {
@@ -22,16 +24,22 @@ export class Server {
   private readonly publicPath: string;
   private readonly routes: Router;
   private readonly acceptedOrigins: string[];
+  private readonly trustProxy: number;
 
   constructor(options: Options) {
-    const { port, routes, public_path = 'public', acceptedOrigins = [] } = options;
+    const { port, routes, public_path = 'public', acceptedOrigins = [], trustProxy = 0 } = options;
     this.port = port;
     this.publicPath = public_path;
     this.routes = routes;
     this.acceptedOrigins = acceptedOrigins;
+    this.trustProxy = trustProxy;
   }
 
   async start() {
+    //* 0. Seguridad: IP real detrás del proxy y cabeceras seguras
+    this.app.set('trust proxy', this.trustProxy);
+    this.app.use(helmet());
+
     //* 1. CORS Configuration
     this.app.use(
       cors({

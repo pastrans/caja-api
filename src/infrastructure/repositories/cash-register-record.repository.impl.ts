@@ -10,6 +10,7 @@ import {
   CreateCashInOutDto,
   PaginationDto,
   CashRegisterPaginatedResult,
+  CloseValidator,
 } from '../../domain';
 
 export class CashRegisterRecordRepositoryImpl implements CashRegisterRecordRepository {
@@ -19,8 +20,8 @@ export class CashRegisterRecordRepositoryImpl implements CashRegisterRecordRepos
     return this.datasource.open(openDto);
   }
 
-  close(closeDto: CloseCashRegisterDto): Promise<CashRegisterRecordEntity> {
-    return this.datasource.close(closeDto);
+  close(closeDto: CloseCashRegisterDto, validate: CloseValidator): Promise<CashRegisterRecordEntity> {
+    return this.datasource.close(closeDto, validate);
   }
 
   findActive(): Promise<CashRegisterRecordEntity | null> {

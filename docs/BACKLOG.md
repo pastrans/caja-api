@@ -8,18 +8,18 @@ Pendientes detectados en el análisis del proyecto (octubre 2026), escritos como
 |----|----------|-----------|--------|
 | US-01 | Separar tokens de sesión y de reset de contraseña | 🔴 | ✅ Hecho (rama `staging`) |
 | US-02 | No exponer credenciales de BD en logs | 🔴 | ✅ Hecho (rama `staging`) |
-| US-03 | Apertura y cierre de caja atómicos | 🔴 | Pendiente |
+| US-03 | Apertura y cierre de caja atómicos | 🔴 | ✅ Hecho (rama `staging`) |
 | US-04 | Montos con precisión decimal | 🔴 | ✅ Hecho (rama `staging`) |
 | US-05 | Evitar enumeración de usuarios en "olvidé mi contraseña" | 🔴 | ✅ Hecho (rama `staging`) |
-| US-06 | Protección contra fuerza bruta y cabeceras seguras | 🔴 | Pendiente |
+| US-06 | Protección contra fuerza bruta y cabeceras seguras | 🔴 | ✅ Hecho (rama `staging`) |
 | US-07 | Corregir `.env.template` y configuración local | 🟡 | ✅ Hecho (rama `staging`) |
 | US-08 | Límite máximo en la paginación | 🟡 | ✅ Hecho (rama `staging`) |
 | US-09 | Errores de base de datos con respuestas claras | 🟡 | ✅ Hecho (rama `staging`) |
 | US-10 | Emails normalizados y validados | 🟡 | Pendiente |
 | US-11 | 404 en JSON para rutas `/api` inexistentes | 🟡 | ✅ Hecho (rama `staging`) |
-| US-12 | Email opcional en desarrollo | 🟡 | Pendiente |
+| US-12 | Email opcional en desarrollo | 🟡 | ✅ Hecho (rama `staging`) |
 | US-13 | Usuario autenticado en `req.user` | 🟢 | ✅ Hecho (rama `staging`) |
-| US-14 | Respetar la regla de dependencias de Clean Architecture | 🟢 | Pendiente |
+| US-14 | Respetar la regla de dependencias de Clean Architecture | 🟢 | ✅ Hecho (rama `staging`) |
 | US-15 | Limpiar código muerto y restos de la plantilla | 🟢 | ✅ Hecho (rama `staging`) |
 | US-16 | Tests automatizados y linter | 🟢 | Pendiente |
 | US-17 | Despliegue con Docker y scripts de producción | 🟢 | Pendiente |
@@ -60,6 +60,8 @@ Hoy `OpenCashRegister` hace `findActive()` y luego `open()` sin transacción, y 
 - Dos peticiones simultáneas de apertura: una responde 200 y la otra 400 (nunca 500).
 - Un segundo cierre simultáneo de la misma caja responde 400.
 
+> **Nota:** el índice está declarado en el schema (`@@unique(..., where: raw(...))`, preview feature `partialIndexes`). El cierre bloquea la caja con `SELECT ... FOR UPDATE` y valida los totales dentro de la transacción; las ventas y movimientos toman un bloqueo compartido (`FOR SHARE`), así que esperan al cierre y después lo ven como cerrado. El seed abre y cierra las cajas una por una.
+
 ### US-04 — Montos con precisión decimal
 **Como** administrador, **quiero** que los montos se guarden con precisión exacta, **para** evitar errores de redondeo en totales y diferencias de caja.
 
@@ -81,6 +83,8 @@ Hoy `OpenCashRegister` hace `findActive()` y luego `open()` sin transacción, y 
 **Criterios de aceptación**
 - `/auth/login` y `/auth/forgot-password` tienen límite de peticiones por IP (ej. `express-rate-limit`) y responden 429 al excederlo.
 - Se usa `helmet` en el servidor.
+
+> **Nota:** login: 10 intentos **fallidos** por IP cada 15 min (los exitosos no cuentan); forgot-password: 5 por IP cada 15 min. Detrás de un proxy (Railway) Express necesita `trust proxy` para ver la IP real: se configura con `TRUST_PROXY` (por defecto `1`). Los contadores viven en memoria, así que valen mientras la API corra en una sola instancia.
 
 ---
 
@@ -131,6 +135,7 @@ Hoy `OpenCashRegister` hace `findActive()` y luego `open()` sin transacción, y 
 
 **Criterios de aceptación**
 - `SENDGRID_API_KEY` solo es obligatoria si `SEND_EMAIL=true`.
+- (También `MAILER_EMAIL`.)
 
 ---
 
@@ -149,6 +154,8 @@ Hoy `OpenCashRegister` hace `findActive()` y luego `open()` sin transacción, y 
 **Criterios de aceptación**
 - `ForgotPassword` depende de una interfaz `EmailSender` del dominio, no de `EmailService`.
 - Los adaptadores JWT y bcrypt se inyectan por constructor en todos los casos de uso. Hoy `LoginUser` recibe `signToken` y `comparePassword` pero no los usa.
+
+> **Nota:** los contratos viven en `src/domain/interfaces` (`EmailSender`, `SignToken`, `HashPassword`, …, y `TokenPurpose`). Los controladores inyectan `JwtAdapter`, `bcryptAdapter` y `EmailService`. El dominio ya no importa nada de `config` ni de `infrastructure`.
 
 ### US-15 — Limpiar código muerto y restos de la plantilla
 **Como** desarrollador, **quiero** eliminar el código sin uso, **para** que el proyecto sea más fácil de entender.

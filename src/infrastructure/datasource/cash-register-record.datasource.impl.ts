@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { prisma } from '../../data/postgres';
 import {
   CashRegisterRecordDatasource,
@@ -12,7 +13,10 @@ import {
   PaginationDto,
   CashRegisterPaginatedResult,
   CashRegisterSummary,
+  CloseValidator,
 } from '../../domain';
+
+const ALREADY_OPEN_MESSAGE = 'There is already an active cash register open';
 
 export class CashRegisterRecordDatasourceImpl implements CashRegisterRecordDatasource {
   private readonly includeQuery = {
@@ -29,48 +33,85 @@ export class CashRegisterRecordDatasourceImpl implements CashRegisterRecordDatas
     closing: { include: { user: true } },
   };
 
+  // Atómico: el índice único parcial "CashRegisterRecord_single_open_key" impide dos cajas abiertas.
+  // Si dos aperturas llegan a la vez, la segunda viola el índice y responde 400 (no 500).
   async open(openDto: OpenCashRegisterDto): Promise<CashRegisterRecordEntity> {
-    const record = await prisma.cashRegisterRecord.create({
-      data: {
-        status: 'OPEN',
-        opening: {
-          create: {
-            cash: openDto.cash,
-            userId: openDto.userId,
-            denominations: openDto.denominations as any,
-            ...(openDto.note && { note: openDto.note }),
-          },
-        },
-      },
-      include: this.includeQuery,
-    });
+    try {
+      const record = await prisma.$transaction(async (tx) => {
+        const active = await tx.cashRegisterRecord.findFirst({ where: { status: 'OPEN' }, select: { id: true } });
+        if (active) throw CustomError.badRequest(ALREADY_OPEN_MESSAGE);
 
-    return CashRegisterRecordEntity.fromObject(record);
+        return tx.cashRegisterRecord.create({
+          data: {
+            status: 'OPEN',
+            opening: {
+              create: {
+                cash: openDto.cash,
+                userId: openDto.userId,
+                denominations: openDto.denominations as any,
+                ...(openDto.note && { note: openDto.note }),
+              },
+            },
+          },
+          include: this.includeQuery,
+        });
+      });
+
+      return CashRegisterRecordEntity.fromObject(record);
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw CustomError.badRequest(ALREADY_OPEN_MESSAGE);
+      }
+      throw error;
+    }
   }
 
-  
-  async close(closeDto: CloseCashRegisterDto): Promise<CashRegisterRecordEntity> {
-    const updated = await prisma.cashRegisterRecord.update({
-      where: { id: closeDto.cashRegisterRecordId },
-      data: {
-        status: 'CLOSED',
-        closing: {
-          create: {
-            cashProvided: closeDto.cashProvided,
-            difference: closeDto.difference,
-            totalTransactions: closeDto.totalTransactions,
-            totalCashInOut: closeDto.totalCashInOut,
-            totalExpected: closeDto.totalExpected,
-            userId: closeDto.userId,
-            denominations: closeDto.denominations as any,
-            ...(closeDto.note && { note: closeDto.note }),
+  // Atómico: bloquea la caja (FOR UPDATE) mientras valida y guarda el cierre.
+  // Las ventas y movimientos nuevos esperan al cierre y después lo ven como CLOSED;
+  // un segundo cierre simultáneo también espera y falla en la validación (400).
+  async close(closeDto: CloseCashRegisterDto, validate: CloseValidator): Promise<CashRegisterRecordEntity> {
+    const id = closeDto.cashRegisterRecordId;
+
+    const updated = await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT "id" FROM "CashRegisterRecord" WHERE "id" = ${id} FOR UPDATE`;
+
+      const record = await tx.cashRegisterRecord.findUnique({ where: { id }, include: this.includeQuery });
+      if (!record) throw CustomError.notFound(`Cash register record with id ${id} not found`);
+
+      validate(CashRegisterRecordEntity.fromObject(record));
+
+      return tx.cashRegisterRecord.update({
+        where: { id },
+        data: {
+          status: 'CLOSED',
+          closing: {
+            create: {
+              cashProvided: closeDto.cashProvided,
+              difference: closeDto.difference,
+              totalTransactions: closeDto.totalTransactions,
+              totalCashInOut: closeDto.totalCashInOut,
+              totalExpected: closeDto.totalExpected,
+              userId: closeDto.userId,
+              denominations: closeDto.denominations as any,
+              ...(closeDto.note && { note: closeDto.note }),
+            },
           },
         },
-      },
-      include: this.includeQuery,
+        include: this.includeQuery,
+      });
     });
 
     return CashRegisterRecordEntity.fromObject(updated);
+  }
+
+  // Bloqueo compartido (FOR SHARE): varias ventas pueden registrarse a la vez,
+  // pero ninguna mientras la caja se está cerrando.
+  private async lockOpenRegister(tx: Prisma.TransactionClient, id: number, closedMessage: string): Promise<void> {
+    const [row] = await tx.$queryRaw<{ status: string }[]>`
+      SELECT "status"::text AS "status" FROM "CashRegisterRecord" WHERE "id" = ${id} FOR SHARE
+    `;
+    if (!row) throw CustomError.notFound(`Cash register record with id ${id} not found`);
+    if (row.status !== 'OPEN') throw CustomError.badRequest(closedMessage);
   }
 
   async findActive(): Promise<CashRegisterRecordEntity | null> {
@@ -159,34 +200,42 @@ export class CashRegisterRecordDatasourceImpl implements CashRegisterRecordDatas
   }
 
   async createTransaction(dto: CreateTransactionDto): Promise<TransactionRecordEntity> {
+    const transaction = await prisma.$transaction(async (tx) => {
+      await this.lockOpenRegister(tx, dto.cashRegisterRecordId, 'Cannot create a transaction on a closed cash register');
 
-    const transaction = await prisma.transactionRecord.create({
-      data: {
-        cashRegisterRecordId: dto.cashRegisterRecordId,
-        employeeId: dto.employeeId,
-        amountToCharge: dto.amountToCharge,
-        cashProvided: dto.cashProvided,
-        changeReturned: dto.changeReturned,
-        denominations: dto.denominations as any,
-        ...(dto.note && { note: dto.note }),
-      },
-      include: { employee: true },
+      return tx.transactionRecord.create({
+        data: {
+          cashRegisterRecordId: dto.cashRegisterRecordId,
+          employeeId: dto.employeeId,
+          amountToCharge: dto.amountToCharge,
+          cashProvided: dto.cashProvided,
+          changeReturned: dto.changeReturned,
+          denominations: dto.denominations as any,
+          ...(dto.note && { note: dto.note }),
+        },
+        include: { employee: true },
+      });
     });
 
     return TransactionRecordEntity.fromObject(transaction);
   }
 
   async createCashInOut(dto: CreateCashInOutDto): Promise<CashInOutRecordEntity> {
-    const movement = await prisma.cashInOutRecord.create({
-      data: {
-        cashRegisterRecordId: dto.cashRegisterRecordId,
-        type: dto.type,
-        amount: dto.amount,
-        reason: dto.reason,
-        ...(dto.note && { note: dto.note }),
-      },
+    const movement = await prisma.$transaction(async (tx) => {
+      await this.lockOpenRegister(tx, dto.cashRegisterRecordId, 'Cannot record cash movement on a closed cash register');
+
+      return tx.cashInOutRecord.create({
+        data: {
+          cashRegisterRecordId: dto.cashRegisterRecordId,
+          type: dto.type,
+          amount: dto.amount,
+          reason: dto.reason,
+          ...(dto.note && { note: dto.note }),
+        },
+      });
     });
 
     return CashInOutRecordEntity.fromObject(movement);
   }
+
 }

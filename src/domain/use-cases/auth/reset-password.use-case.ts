@@ -1,7 +1,7 @@
 import { ResetPasswordDto, UpdateUserDto } from '../../dtos';
 import { UserRepository } from '../../repositories';
 import { CustomError } from '../../errors/custom.error';
-import { JwtAdapter, TokenPurpose, bcryptAdapter } from '../../../config';
+import { HashPassword, PasswordFingerprint, TokenPurpose, ValidateToken } from '../../interfaces/auth-adapters.interface';
 
 export interface ResetPasswordUseCase {
   execute(dto: ResetPasswordDto): Promise<boolean>;
@@ -16,9 +16,9 @@ interface ResetTokenPayload {
 export class ResetPassword implements ResetPasswordUseCase {
   constructor(
     private readonly userRepository: UserRepository,
-    private readonly validateToken: <T>(token: string) => Promise<T | null> = JwtAdapter.validateToken,
-    private readonly hashPassword: (password: string) => string = bcryptAdapter.hash,
-    private readonly fingerprint: (hashed: string) => string = bcryptAdapter.fingerprint,
+    private readonly validateToken: ValidateToken,
+    private readonly hashPassword: HashPassword,
+    private readonly fingerprint: PasswordFingerprint,
   ) {}
 
   async execute(dto: ResetPasswordDto): Promise<boolean> {
