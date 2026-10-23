@@ -27,3 +27,8 @@ export * from './cash-register/create-cash-in-out.use-case';
 export * from './auth/login-user.use-case';
 export * from './auth/forgot-password.use-case';    
 export * from './auth/reset-password.use-case';
+
+// Dashboard use cases
+export * from './dashboard/get-sales-summary.use-case';
+export * from './dashboard/get-sales-by-employee.use-case';
+export * from './dashboard/get-sales-over-time.use-case';

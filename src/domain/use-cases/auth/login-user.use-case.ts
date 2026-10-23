@@ -1,7 +1,7 @@
 import { LoginUserDto } from '../../dtos';
 import { UserEntity } from '../../entities';
 import { UserRepository } from '../../repositories';
-import { bcryptAdapter, JwtAdapter } from '../../../config';
+import { ComparePassword, SignToken, TokenPurpose } from '../../interfaces/auth-adapters.interface';
 import { CustomError } from '../../errors/custom.error';
 
 export interface UserAuthResponse {
@@ -16,8 +16,8 @@ export interface LoginUserUseCase {
 export class LoginUser implements LoginUserUseCase {
   constructor(
     private readonly userRepository: UserRepository,
-    private readonly signToken: (payload: any, duration?: string) => Promise<string | null> = JwtAdapter.generateToken,
-    private readonly comparePassword: (password: string, hashed: string) => boolean = bcryptAdapter.compare
+    private readonly signToken: SignToken,
+    private readonly comparePassword: ComparePassword
   ) {}
 
   async execute(dto: LoginUserDto): Promise<UserAuthResponse> {
@@ -31,11 +31,11 @@ export class LoginUser implements LoginUserUseCase {
     }
 
     // 3. Validar la contraseña
-    const isMatching = bcryptAdapter.compare(dto.password, user.password!);
+    const isMatching = this.comparePassword(dto.password, user.password!);
     if (!isMatching) throw CustomError.badRequest('Invalid credentials');
 
     // 4. Generar Token
-    const token = await JwtAdapter.generateToken({ id: user.id, role: user.role });
+    const token = await this.signToken({ id: user.id, role: user.role, purpose: TokenPurpose.SESSION });
     if (!token) throw CustomError.internalServer('Error generating JWT'); 
 
     return {

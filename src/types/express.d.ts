@@ -1,6 +1,6 @@
-// src/@types/express.d.ts
 import { UserEntity } from '../domain/entities/user.entity';
 
+// Usuario autenticado que AuthMiddleware deja en la petición
 declare global {
   namespace Express {
     interface Request {
@@ -8,3 +8,5 @@ declare global {
     }
   }
 }
+
+export {};

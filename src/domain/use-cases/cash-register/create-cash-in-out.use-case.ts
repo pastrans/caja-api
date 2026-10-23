@@ -11,11 +11,8 @@ export class CreateCashInOut implements CreateCashInOutUseCase {
   constructor(private readonly repository: CashRegisterRecordRepository) {}
 
   async execute(dto: CreateCashInOutDto): Promise<CashInOutRecordEntity> {
-    // 1. Regla de negocio: Verificar que la caja existe
+    // 1. Regla de negocio: Verificar que la caja existe (findById lanza 404 si no existe)
     const cashRegister = await this.repository.findById(dto.cashRegisterRecordId);
-    if (!cashRegister) {
-      throw CustomError.notFound(`Cash register record with ID ${dto.cashRegisterRecordId} not found`);
-    }
 
     // 2. Regla de negocio: La caja NO debe estar cerrada
     if (cashRegister.status !== 'OPEN') {

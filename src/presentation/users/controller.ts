@@ -11,6 +11,7 @@ import {
   UpdateUserDto,
   UserRepository,
 } from '../../domain';
+import { bcryptAdapter } from '../../config';
 
 export class UsersController {
   constructor(private readonly userRepository: UserRepository) {}
@@ -40,7 +41,7 @@ export class UsersController {
     const [error, createUserDto] = CreateUserDto.create(req.body);
     if (error) return next(CustomError.badRequest(error));
 
-    new CreateUser(this.userRepository)
+    new CreateUser(this.userRepository, bcryptAdapter.hash)
       .execute(createUserDto!)
       .then((user) => res.json(user))
       .catch(next);
@@ -53,7 +54,7 @@ export class UsersController {
     const [error, updateUserDto] = UpdateUserDto.create({ ...req.body, id });
     if (error) return next(CustomError.badRequest(error));
 
-    new UpdateUser(this.userRepository)
+    new UpdateUser(this.userRepository, bcryptAdapter.hash)
       .execute(updateUserDto!)
       .then((user) => res.json(user))
       .catch(next);

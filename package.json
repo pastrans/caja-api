@@ -8,7 +8,7 @@
   "main": "index.js",
   "scripts": {
     "postinstall": "prisma generate",
-    "dev": "prisma migrate dev && tsnd --respawn --clear src/app.ts",
+    "dev": "prisma migrate dev && tsnd --files --respawn --clear src/app.ts",
     "build": "rimraf ./dist && tsc && prisma generate",
     "start": "npm run build && node dist/app.js",
     "prisma:generate": "prisma generate",
@@ -25,6 +25,8 @@
     "dotenv": "^16.4.5",
     "env-var": "^7.5.0",
     "express": "^4.19.2",
+    "express-rate-limit": "^7.5.1",
+    "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
     "pg": "^8.22.0"
   },

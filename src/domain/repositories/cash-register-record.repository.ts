@@ -10,11 +10,11 @@ import {
   TransactionRecordEntity,
   CashInOutRecordEntity,
 } from '../entities';
-import { CashRegisterPaginatedResult } from '../datasources/cash-register-record.datasource';
+import { CashRegisterPaginatedResult, CloseValidator } from '../datasources/cash-register-record.datasource';
 
 export abstract class CashRegisterRecordRepository {
   abstract open(openDto: OpenCashRegisterDto): Promise<CashRegisterRecordEntity>;
-  abstract close(closeDto: CloseCashRegisterDto): Promise<CashRegisterRecordEntity>;
+  abstract close(closeDto: CloseCashRegisterDto, validate: CloseValidator): Promise<CashRegisterRecordEntity>;
   abstract findActive(): Promise<CashRegisterRecordEntity | null>;
   abstract findById(id: number): Promise<CashRegisterRecordEntity>;
   abstract getAll(paginationDto: PaginationDto): Promise<CashRegisterPaginatedResult>;

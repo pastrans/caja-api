@@ -1,3 +1,4 @@
+import { CustomError } from '../errors/custom.error';
 export class CashInOutRecordEntity {
   constructor(
     public id: number,
@@ -12,14 +13,14 @@ export class CashInOutRecordEntity {
   public static fromObject(object: { [key: string]: any }): CashInOutRecordEntity {
     const { id, type, amount, reason, cashRegisterRecordId, date, note } = object;
 
-    if (!id) throw 'CashInOutRecord ID is required';
-    if (!type || (type !== 'IN' && type !== 'OUT')) throw 'Valid type (IN/OUT) is required';
-    if (amount === undefined || amount === null) throw 'Amount is required';
-    if (!reason) throw 'Reason is required';
-    if (!cashRegisterRecordId) throw 'CashRegisterRecordId is required';
+    if (!id) throw CustomError.internalServer('CashInOutRecord ID is required');
+    if (!type || (type !== 'IN' && type !== 'OUT')) throw CustomError.internalServer('Valid type (IN/OUT) is required');
+    if (amount === undefined || amount === null) throw CustomError.internalServer('Amount is required');
+    if (!reason) throw CustomError.internalServer('Reason is required');
+    if (!cashRegisterRecordId) throw CustomError.internalServer('CashRegisterRecordId is required');
 
     const parsedDate = date ? new Date(date) : new Date();
-    if (isNaN(parsedDate.getTime())) throw 'Invalid date format in CashInOutRecord';
+    if (isNaN(parsedDate.getTime())) throw CustomError.internalServer('Invalid date format in CashInOutRecord');
 
     return new CashInOutRecordEntity(
       Number(id),

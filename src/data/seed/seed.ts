@@ -67,72 +67,65 @@ async function main() {
   const employees = await Promise.all(employeeCreationPromises);
   console.log('Empleados creados!');
 
-  // 3. Crear aperturas de caja (OpenCashRegister)
+  // 3. Cajas: solo puede haber una abierta a la vez, así que cada caja se abre,
+  //    recibe sus transacciones y movimientos, y se cierra antes de abrir la siguiente
   const cashRegisterDatasource = new CashRegisterRecordDatasourceImpl();
-  const openingPromises = seedData.OpenCashRegister.map(openData => {
+
+  for (const [index, openData] of seedData.OpenCashRegister.entries()) {
+    const position = index + 1;
+
+    // 3.1 Apertura
     const user = users[openData.userSequenceArray - 1];
     if (!user) throw new Error(`Usuario no encontrado en la posición ${openData.userSequenceArray}`);
 
-    const [error, openCashRegisterDto] = OpenCashRegisterDto.create({
+    const [openError, openCashRegisterDto] = OpenCashRegisterDto.create({
       ...openData,
       userId: user.id,
     });
-    if (error) throw new Error(`Error en DTO de apertura de caja: ${error}`);
-    return cashRegisterDatasource.open(openCashRegisterDto!);
-  });
+    if (openError) throw new Error(`Error en DTO de apertura de caja: ${openError}`);
+    const cashRegister = await cashRegisterDatasource.open(openCashRegisterDto!);
 
-  const openedCashRegisters = await Promise.all(openingPromises);
-  console.log('Cajas abiertas!');
+    // 3.2 Transacciones
+    for (const transactionData of seedData.transactions.filter(t => t.cashRegisterRecordSequenceArray === position)) {
+      const employee = employees[transactionData.employeeSequenceArray - 1];
+      if (!employee) throw new Error(`Empleado no encontrado en la posición ${transactionData.employeeSequenceArray}`);
+      const [error, createTransactionDto] = CreateTransactionDto.create({
+        ...transactionData,
+        cashRegisterRecordId: cashRegister.id,
+        employeeId: employee.id,
+      });
+      if (error) throw new Error(`Error en DTO de transacción: ${error}`);
+      await cashRegisterDatasource.createTransaction(createTransactionDto!);
+    }
 
-  // 4. Crear transacciones para las cajas abiertas
-  const transactionPromises = seedData.transactions.map(transactionData => {
-    const cashRegister = openedCashRegisters[transactionData.cashRegisterRecordSequenceArray - 1];
-    const employee = employees[transactionData.employeeSequenceArray - 1];
-    if (!cashRegister) throw new Error(`Caja no encontrada en la posición ${transactionData.cashRegisterRecordSequenceArray}`);
-    if (!employee) throw new Error(`Empleado no encontrado en la posición ${transactionData.employeeSequenceArray}`);
-    const [error, createTransactionDto] = CreateTransactionDto.create({
-      ...transactionData,
-      cashRegisterRecordId: cashRegister.id,
-      employeeId: employee.id,
-    });
-    if (error) throw new Error(`Error en DTO de transacción: ${error}`);
-    return cashRegisterDatasource.createTransaction(createTransactionDto!);
-  });
-  await Promise.all(transactionPromises);
-  console.log('Transacciones creadas!');
+    // 3.3 Entradas/salidas de efectivo
+    for (const cashInOutData of seedData.cash_in_out.filter(c => c.cashRegisterRecordSequenceArray === position)) {
+      const [error, createCashInOutDto] = CreateCashInOutDto.create({
+        ...cashInOutData,
+        cashRegisterRecordId: cashRegister.id,
+      });
+      if (error) throw new Error(`Error en DTO de cash-in-out: ${error}`);
+      await cashRegisterDatasource.createCashInOut(createCashInOutDto!);
+    }
 
-  // 5. Crear entradas/salidas de efectivo
-  const cashInOutPromises = seedData.cash_in_out.map(cashInOutData => {
-    const cashRegister = openedCashRegisters[cashInOutData.cashRegisterRecordSequenceArray - 1];
-    if (!cashRegister) throw new Error(`Caja no encontrada en la posición ${cashInOutData.cashRegisterRecordSequenceArray}`);
+    // 3.4 Cierre (si la caja tiene uno definido; la última puede quedar abierta)
+    const closeData = seedData.CloseCashRegister.find(c => c.cashRegisterRecordSequenceArray === position);
+    if (closeData) {
+      const closeUser = users[closeData.userSequenceArray - 1];
+      if (!closeUser) throw new Error(`Usuario no encontrado en la posición ${closeData.userSequenceArray}`);
 
-    const [error, createCashInOutDto] = CreateCashInOutDto.create({
-      ...cashInOutData,
-      cashRegisterRecordId: cashRegister.id,
-    });
-    if (error) throw new Error(`Error en DTO de cash-in-out: ${error}`);
-    return cashRegisterDatasource.createCashInOut(createCashInOutDto!);
-  });
-  await Promise.all(cashInOutPromises);
-  console.log('Movimientos de caja creados!');
+      const [closeError, closeCashRegisterDto] = CloseCashRegisterDto.create({
+        ...closeData,
+        cashRegisterRecordId: cashRegister.id,
+        userId: closeUser.id,
+      });
+      if (closeError) throw new Error(`Error en DTO de cierre de caja: ${closeError}`);
+      // Los totales del seed se guardan tal cual: no se validan contra el balance calculado
+      await cashRegisterDatasource.close(closeCashRegisterDto!, () => {});
+    }
 
-  // 6. Crear cierres de caja (CloseCashRegister)
-  const closingPromises = seedData.CloseCashRegister.map(closeData => {
-    const cashRegister = openedCashRegisters[closeData.cashRegisterRecordSequenceArray - 1];
-    const user = users[closeData.userSequenceArray - 1];
-    if (!cashRegister) throw new Error(`Caja no encontrada en la posición ${closeData.cashRegisterRecordSequenceArray}`);
-    if (!user) throw new Error(`Usuario no encontrado en la posición ${closeData.userSequenceArray}`);
-
-    const [error, closeCashRegisterDto] = CloseCashRegisterDto.create({
-      ...closeData,
-      cashRegisterRecordId: cashRegister.id,
-      userId: user.id,
-    });
-    if (error) throw new Error(`Error en DTO de cierre de caja: ${error}`);
-    return cashRegisterDatasource.close(closeCashRegisterDto!);
-  });
-  await Promise.all(closingPromises);
-  console.log('Cajas cerradas!');
+    console.log(`Caja ${position} ${closeData ? 'abierta y cerrada' : 'abierta'}!`);
+  }
 
   console.log('SEEDED');
 }

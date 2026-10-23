@@ -41,5 +41,8 @@
   "exclude": [
     "node_modules",
     "prisma.config.ts"
-  ]
+  ],
+  "ts-node": {
+    "files": true
+  }
 }

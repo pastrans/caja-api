@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { JwtAdapter } from '../../config';
-import { CustomError, UserRepository } from '../../domain';
+import { CustomError, TokenPurpose, UserRepository } from '../../domain';
 
 export class AuthMiddleware {
   static validateJWT = (userRepository: UserRepository, ...validRoles: string[]) => {
@@ -19,8 +19,9 @@ export class AuthMiddleware {
 
       try {
         // 2. Decodificar y validar token JWT
-        const payload = await JwtAdapter.validateToken<{ id: number }>(token);
-        if (!payload) {
+        // Solo se aceptan tokens de sesión (un token de reset no da acceso a la API)
+        const payload = await JwtAdapter.validateToken<{ id: number; purpose?: string }>(token);
+        if (!payload || payload.purpose !== TokenPurpose.SESSION) {
           return next(CustomError.unauthorized('Invalid or expired token'));
         }
 
@@ -45,7 +46,7 @@ export class AuthMiddleware {
         }
 
         // 6. Inyectar usuario en la petición y continuar
-        req.body.user = user;
+        req.user = user;
         next();
       } catch (error) {
         next(error);

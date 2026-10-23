@@ -1,7 +1,7 @@
 import { CreateUserDto } from '../../dtos';
 import { UserEntity } from '../../entities';
 import { UserRepository } from '../../repositories';
-import { bcryptAdapter } from '../../../config';
+import { HashPassword } from '../../interfaces/auth-adapters.interface';
 
 export interface CreateUserUseCase {
   execute(dto: CreateUserDto): Promise<UserEntity>;
@@ -10,7 +10,7 @@ export interface CreateUserUseCase {
 export class CreateUser implements CreateUserUseCase {
   constructor(
     private readonly repository: UserRepository,
-    private readonly hashPassword: (password: string) => string = bcryptAdapter.hash // defalut value
+    private readonly hashPassword: HashPassword
   ) {}
 
   async execute(dto: CreateUserDto): Promise<UserEntity> {
