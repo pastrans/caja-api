@@ -8,7 +8,7 @@
   "main": "index.js",
   "scripts": {
     "postinstall": "prisma generate",
-    "dev": "prisma migrate dev && tsnd --respawn --clear src/app.ts",
+    "dev": "prisma migrate dev && tsnd --files --respawn --clear src/app.ts",
     "build": "rimraf ./dist && tsc && prisma generate",
     "start": "npm run build && node dist/app.js",
     "prisma:generate": "prisma generate",
