@@ -24,9 +24,9 @@ Pendientes detectados en el análisis del proyecto (octubre 2026), escritos como
 | US-16 | Tests automatizados y linter | 🟢 | Pendiente |
 | US-17 | Despliegue con Docker y scripts de producción | 🟢 | Pendiente |
 | US-18 | Dashboard de ventas | — | ✅ Hecho (rama `staging`) |
-| US-19 | Catálogo de proveedores | — | Pendiente |
-| US-20 | Importación masiva de DTE de compras | — | Pendiente |
-| US-21 | Vincular notas de crédito con su crédito fiscal | — | Pendiente |
+| US-19 | Catálogo de proveedores | — | ✅ Hecho (rama `staging`) |
+| US-20 | Importación masiva de DTE de compras | — | ✅ Hecho (rama `staging`) |
+| US-21 | Vincular notas de crédito con su crédito fiscal | — | En parte: falta el filtro `pendingLink` (va con US-22) |
 | US-22 | Consultar documentos de compra | — | Pendiente |
 | US-23 | Anular y reactivar documentos de compra | — | Pendiente |
 | US-24 | Reportes de compras e IVA | — | Pendiente |
@@ -213,7 +213,7 @@ Todas las historias son solo para `ADMIN`. El frontend vive en otro repositorio;
 **Como** administrador, **quiero** subir varios archivos JSON de facturas a la vez, **para** registrar mis compras sin capturarlas a mano.
 
 **Criterios de aceptación**
-- `POST /api/v1/purchase-documents/import` recibe archivos `.json` (multipart). Máximo 100 archivos por carga y 1 MB por archivo.
+- `POST /api/v1/purchase-documents/import` recibe archivos `.json` (multipart). Máximo 100 archivos por carga y 1 MB por archivo; si se exceden, la carga completa responde `400`.
 - Solo se acepta el JSON; el PDF no se sube ni se guardan archivos en disco.
 - Lee archivos en UTF-8 y en Latin-1 (varios proveedores envían Latin-1).
 - Se aceptan solo créditos fiscales (`tipoDte = 03`) y notas de crédito (`tipoDte = 05`).

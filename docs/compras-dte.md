@@ -54,7 +54,7 @@ Cuando el JSON trae `totalPagar` se compara con el cálculo; si difieren en más
 
 | # | Regla | Resultado |
 |---|---|---|
-| 1 | Extensión `.json`, ≤ 1 MB, ≤ 100 archivos por carga | Rechazo |
+| 1 | Extensión `.json` | Rechazo |
 | 2 | JSON válido con `identificacion`, `emisor`, `receptor`, `resumen`, `cuerpoDocumento` | Rechazo |
 | 3 | `tipoDte` ∈ {`03`, `05`} | Rechazo |
 | 4 | `ambiente = 01` | Rechazo |
@@ -64,6 +64,8 @@ Cuando el JSON trae `totalPagar` se compara con el cálculo; si difieren en más
 | 8 | Hacienda lo recibió con observaciones | Advertencia |
 | 9 | IVA = 13 % del gravado; suma de líneas = gravado; total calculado = `totalPagar` (±$0.01) | Advertencia |
 | 10 | Nota de crédito cuyo crédito fiscal no está registrado | Advertencia (pendiente de vincular) |
+
+**Límites de la carga:** máximo 100 archivos y 1 MB por archivo. Si se exceden, se rechaza la petición completa con `400` (no se importa nada).
 
 **Orden de proceso dentro de una carga:** primero los créditos fiscales y después las notas de crédito, para que se vinculen aunque vengan en la misma carga.
 
@@ -85,6 +87,7 @@ model Supplier {
   activityDescription String?
   phone               String?
   email               String?
+  lastIssueDate       DateTime @db.Date // Fecha del DTE más reciente; sus datos son los que se guardan
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
@@ -192,19 +195,49 @@ model CreditNoteRelation {
 | `GET` | `/api/v1/purchase-reports/summary` | US-24 |
 | `GET` | `/api/v1/purchase-reports/by-supplier` | US-24 |
 
-Respuesta de la importación:
+### `POST /api/v1/purchase-documents/import`
+
+Petición `multipart/form-data` con uno o varios archivos en el campo `files`. Responde `200` aunque algunos archivos se rechacen; `results` sigue el orden de los archivos enviados.
 
 ```json
 {
   "summary": { "received": 3, "imported": 2, "rejected": 1, "withWarnings": 1 },
   "results": [
-    { "file": "14C892E4-....json", "status": "imported", "documentId": 10, "warnings": [] },
-    { "file": "264ED68A-....json", "status": "imported", "documentId": 11,
-      "warnings": [{ "code": "PENDING_LINK", "message": "Crédito fiscal 14C892E4-... no registrado" }] },
-    { "file": "otro.json", "status": "rejected", "reason": "DUPLICATE", "message": "El documento ya está registrado" }
+    { "file": "14C892E4-....json", "status": "imported", "documentId": 10, "type": "CREDITO_FISCAL",
+      "generationCode": "14C892E4-...", "linkedCreditNotes": 0, "warnings": [] },
+    { "file": "264ED68A-....json", "status": "imported", "documentId": 11, "type": "NOTA_CREDITO",
+      "generationCode": "264ED68A-...", "linkedCreditNotes": 0,
+      "warnings": [{ "code": "PENDING_LINK", "message": "Related crédito fiscal 14C892E4-... is not registered yet; ..." }] },
+    { "file": "otro.json", "status": "rejected", "reason": "DUPLICATE", "message": "Document ... is already registered" }
   ]
 }
 ```
+
+`linkedCreditNotes`: en un crédito fiscal, cuántas notas de crédito que estaban pendientes se vincularon al importarlo.
+
+| `reason` (rechazo) | Causa |
+|---|---|
+| `INVALID_FILE` | No es `.json` |
+| `INVALID_JSON` | El contenido no es JSON |
+| `INVALID_STRUCTURE` | Falta un bloque o campo obligatorio del DTE (el mensaje dice cuál) |
+| `UNSUPPORTED_TYPE` | Tipo distinto de `03` o `05` |
+| `TEST_ENVIRONMENT` | Ambiente de pruebas |
+| `MISSING_STAMP` | Sin sello de recepción |
+| `RECEIVER_MISMATCH` | NRC del receptor no configurado |
+| `DUPLICATE` | Ya registrado, o repetido en la misma carga |
+| `INTERNAL_ERROR` | Error inesperado al guardar (queda en el log del servidor) |
+
+| `code` (advertencia) | Causa |
+|---|---|
+| `MH_OBSERVATIONS` | Hacienda lo recibió con observaciones |
+| `TOTALS_MISMATCH` | IVA, suma de líneas o total a pagar no cuadran |
+| `PENDING_LINK` | Nota de crédito cuyo crédito fiscal aún no está registrado |
+
+Errores de la petición completa (`400`): sin archivos, campo distinto de `files`, más de 100 archivos o un archivo de más de 1 MB.
+
+### `GET /api/v1/suppliers`
+
+Paginado (`page`, `limit`) y ordenado por nombre. `search` busca por nombre, nombre comercial o NIT.
 
 ## Decisiones técnicas
 

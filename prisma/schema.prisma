@@ -29,6 +29,11 @@ enum UserRole {
   CASHIER
 }
 
+enum PurchaseDocumentType {
+  CREDITO_FISCAL // tipoDte 03
+  NOTA_CREDITO // tipoDte 05
+}
+
 // ----------------------------------------------------
 // USER & EMPLOYEE MODELS
 // ----------------------------------------------------
@@ -46,6 +51,10 @@ model User {
   // Relaciones de auditoría (quién abrió y quién cerró la caja)
   openings Opening[]
   closings Closing[]
+
+  // Auditoría de compras (quién importó y quién anuló cada documento)
+  importedPurchaseDocuments PurchaseDocument[] @relation("PurchaseDocumentImportedBy")
+  voidedPurchaseDocuments   PurchaseDocument[] @relation("PurchaseDocumentVoidedBy")
 }
 
 model Employee {
@@ -142,4 +151,109 @@ model TransactionRecord {
   // Relación con Employee
   employeeId Int
   employee   Employee @relation(fields: [employeeId], references: [id])
+}
+
+// ----------------------------------------------------
+// PURCHASE (DTE) MODELS
+// ----------------------------------------------------
+
+// Se crea y actualiza solo a partir del emisor de los DTE importados
+model Supplier {
+  id                  Int      @id @default(autoincrement())
+  nit                 String   @unique
+  nrc                 String?
+  name                String
+  commercialName      String?
+  activityCode        String?
+  activityDescription String?
+  phone               String?
+  email               String?
+  lastIssueDate       DateTime @db.Date // Fecha del DTE más reciente; sus datos son los que se guardan
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  documents PurchaseDocument[]
+}
+
+model PurchaseDocument {
+  id                 Int                  @id @default(autoincrement())
+  type               PurchaseDocumentType
+  generationCode     String               @unique // codigoGeneracion, en mayúsculas
+  controlNumber      String
+  receptionStamp     String
+  schemaVersion      Int
+  issueDate          DateTime             @db.Date
+  issueTime          String
+  currency           String               @default("USD")
+  receiverNrc        String
+  operationCondition Int // 1 contado, 2 crédito, 3 otro (informativo)
+
+  nonSubjectTotal   Decimal @db.Decimal(12, 2)
+  exemptTotal       Decimal @db.Decimal(12, 2)
+  taxedTotal        Decimal @db.Decimal(12, 2)
+  discountTotal     Decimal @db.Decimal(12, 2)
+  subtotal          Decimal @db.Decimal(12, 2)
+  ivaAmount         Decimal @db.Decimal(12, 2) // Tributo 20 (IVA 13 %)
+  ivaPerceived      Decimal @db.Decimal(12, 2)
+  ivaWithheld       Decimal @db.Decimal(12, 2)
+  incomeTaxWithheld Decimal @db.Decimal(12, 2)
+  operationTotal    Decimal @db.Decimal(12, 2) // montoTotalOperacion
+  total             Decimal @db.Decimal(12, 2) // operationTotal + ivaPerceived - ivaWithheld - incomeTaxWithheld
+
+  warnings Json? // Structure: [{ code: string, message: string }]
+  rawJson  Json // DTE original completo
+
+  voidedAt   DateTime?
+  voidReason String?
+  voidedById Int?
+
+  importedById Int
+  createdAt    DateTime @default(now())
+
+  supplierId Int
+  supplier   Supplier @relation(fields: [supplierId], references: [id])
+  importedBy User     @relation("PurchaseDocumentImportedBy", fields: [importedById], references: [id])
+  voidedBy   User?    @relation("PurchaseDocumentVoidedBy", fields: [voidedById], references: [id])
+
+  items            PurchaseDocumentItem[]
+  relatedDocuments CreditNoteRelation[]   @relation("CreditNote") // Si es nota de crédito: documentos que modifica
+  creditNotes      CreditNoteRelation[]   @relation("RelatedDocument") // Si es crédito fiscal: notas que lo modifican
+
+  @@index([issueDate])
+  @@index([supplierId, issueDate])
+}
+
+model PurchaseDocumentItem {
+  id                  Int     @id @default(autoincrement())
+  itemNumber          Int
+  itemType            Int
+  code                String?
+  description         String
+  quantity            Decimal @db.Decimal(14, 4)
+  unitOfMeasure       Int
+  unitPrice           Decimal @db.Decimal(14, 6)
+  discount            Decimal @db.Decimal(12, 2)
+  nonSubjectSale      Decimal @db.Decimal(12, 2)
+  exemptSale          Decimal @db.Decimal(12, 2)
+  taxedSale           Decimal @db.Decimal(12, 2)
+  relatedDocumentCode String? // numeroDocumento de la línea (notas de crédito)
+
+  documentId Int
+  document   PurchaseDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+}
+
+model CreditNoteRelation {
+  id                    Int      @id @default(autoincrement())
+  relatedType           String // tipoDocumento del documento relacionado (03, ...)
+  generationType        Int // 1 físico, 2 electrónico
+  relatedDocumentNumber String // Código de generación (en mayúsculas) o número del documento físico
+  relatedIssueDate      DateTime @db.Date
+
+  creditNoteId      Int
+  creditNote        PurchaseDocument  @relation("CreditNote", fields: [creditNoteId], references: [id], onDelete: Cascade)
+  relatedDocumentId Int? // null + generationType 2 = pendiente de vincular
+  relatedDocument   PurchaseDocument? @relation("RelatedDocument", fields: [relatedDocumentId], references: [id])
+
+  @@unique([creditNoteId, relatedDocumentNumber])
+  @@index([relatedDocumentNumber])
 }

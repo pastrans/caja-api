@@ -5,3 +5,5 @@ export * from './dashboard.datasource';
 export * from './employee.datasource';
 export * from './transaction-record.datasource';
 export * from './user.datasource';
+export * from './purchase-document.datasource';
+export * from './supplier.datasource';

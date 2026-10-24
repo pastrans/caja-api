@@ -22,6 +22,9 @@ export const envs = {
 
   // Zona horaria del negocio (IANA) usada para calcular días, semanas y meses en el dashboard
   TIMEZONE: get('TIMEZONE').default('America/Mexico_City').asString(),
+
+  // NRC (Número de Registro de Contribuyente) aceptados como receptor de los DTE de compra
+  RECEIVER_NRCS: get('RECEIVER_NRCS').required().asArray(','),
 };
 
 // TIMEZONE debe ser una zona horaria IANA válida (ej: America/Mexico_City)
@@ -29,4 +32,9 @@ try {
   new Intl.DateTimeFormat('en-US', { timeZone: envs.TIMEZONE });
 } catch {
   throw new Error(`Invalid TIMEZONE env var: ${envs.TIMEZONE}`);
+}
+
+// RECEIVER_NRCS: lista de NRC separados por comas (ej: 1317457 o 1317457,123456)
+if (envs.RECEIVER_NRCS.length === 0 || envs.RECEIVER_NRCS.some((nrc) => !/^\d+$/.test(nrc.replace(/-/g, '').trim()))) {
+  throw new Error(`Invalid RECEIVER_NRCS env var: ${envs.RECEIVER_NRCS.join(',')}`);
 }

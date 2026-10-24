@@ -5,3 +5,4 @@ export * from './employee.entity';
 export * from './opening.entity';
 export * from './transaction-record.entity';
 export * from './user.entity';
+export * from './supplier.entity';

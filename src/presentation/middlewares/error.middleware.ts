@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { Prisma } from '@prisma/client';
+import { MulterError } from 'multer';
 import { CustomError } from '../../domain';
 
 export class ErrorMiddleware {
@@ -24,6 +25,16 @@ export class ErrorMiddleware {
         case 'P2025':
           return res.status(404).json({ error: 'Record not found' });
       }
+    }
+
+    // Límites de la subida de archivos (multer): más archivos o más grandes de lo permitido
+    if (error instanceof MulterError) {
+      const messages: Partial<Record<MulterError['code'], string>> = {
+        LIMIT_FILE_SIZE: 'Each file must be 1 MB or smaller',
+        LIMIT_FILE_COUNT: 'Too many files in a single upload',
+        LIMIT_UNEXPECTED_FILE: 'Files must be sent in the "files" field',
+      };
+      return res.status(400).json({ error: messages[error.code] ?? error.message });
     }
 
     // Body JSON mal formado (express.json)
