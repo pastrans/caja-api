@@ -39,3 +39,12 @@ export * from './supplier/get-supplier.use-case';
 
 // Purchase use cases
 export * from './purchase/import-purchase-documents.use-case';
+export * from './purchase/get-purchase-documents.use-case';
+export * from './purchase/get-purchase-document.use-case';
+export * from './purchase/void-purchase-document.use-case';
+export * from './purchase/unvoid-purchase-document.use-case';
+
+// Purchase report use cases
+export * from './purchase-report/get-purchase-iva-summary.use-case';
+export * from './purchase-report/get-purchase-summary.use-case';
+export * from './purchase-report/get-purchases-by-supplier.use-case';

@@ -1,13 +1,117 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../../data/postgres';
-import { CreatePurchaseDocumentResult, ParsedDte, PurchaseDocumentDatasource } from '../../domain';
+import {
+  CreatePurchaseDocumentResult,
+  PaginationDto,
+  ParsedDte,
+  PurchaseDocumentDatasource,
+  PurchaseDocumentEntity,
+  PurchaseDocumentFiltersDto,
+  PurchaseDocumentPaginatedResult,
+  PurchaseDocumentStateChange,
+  VoidPurchaseDocumentDto,
+} from '../../domain';
 
 const ELECTRONIC_GENERATION = 2;
 
 // Las fechas YYYY-MM-DD se guardan en columnas DATE (sin hora ni zona horaria)
 const toDate = (value: string) => new Date(`${value}T00:00:00Z`);
 
+const userSummary = { select: { id: true, name: true } };
+const documentReference = {
+  select: { id: true, generationCode: true, controlNumber: true, issueDate: true, total: true, voidedAt: true },
+};
+
+// Listado: encabezado y totales. Las relaciones solo para saber si hay vínculos pendientes
+const listInclude = {
+  supplier: { select: { id: true, name: true, nit: true } },
+  importedBy: userSummary,
+  voidedBy: userSummary,
+  relatedDocuments: { select: { generationType: true, relatedDocumentId: true, relatedDocumentNumber: true } },
+} satisfies Prisma.PurchaseDocumentInclude;
+
+const detailInclude = {
+  ...listInclude,
+  items: { orderBy: { itemNumber: 'asc' } },
+  relatedDocuments: { include: { relatedDocument: documentReference }, orderBy: { id: 'asc' } },
+  creditNotes: { include: { creditNote: documentReference }, orderBy: { id: 'asc' } },
+} satisfies Prisma.PurchaseDocumentInclude;
+
 export class PurchaseDocumentDatasourceImpl implements PurchaseDocumentDatasource {
+  async getAll(paginationDto: PaginationDto, filters: PurchaseDocumentFiltersDto): Promise<PurchaseDocumentPaginatedResult> {
+    const { page, limit } = paginationDto;
+    const where = this.buildWhere(filters);
+
+    const [total, documents] = await Promise.all([
+      prisma.purchaseDocument.count({ where }),
+      prisma.purchaseDocument.findMany({
+        where,
+        include: listInclude,
+        omit: { rawJson: true },
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: [{ issueDate: 'desc' }, { id: 'desc' }],
+      }),
+    ]);
+
+    return {
+      total,
+      documents: documents.map(PurchaseDocumentEntity.fromObject),
+    };
+  }
+
+  // El JSON original no se devuelve: es grande (incluye la firma) y ya está desglosado
+  async findById(id: number): Promise<PurchaseDocumentEntity | null> {
+    const document = await prisma.purchaseDocument.findUnique({
+      where: { id },
+      include: detailInclude,
+      omit: { rawJson: true },
+    });
+    if (!document) return null;
+    return PurchaseDocumentEntity.fromObject(document);
+  }
+
+  // Atómico: solo anula si sigue activo (dos anulaciones simultáneas no se pisan)
+  async voidById(dto: VoidPurchaseDocumentDto): Promise<PurchaseDocumentStateChange> {
+    const { count } = await prisma.purchaseDocument.updateMany({
+      where: { id: dto.id, voidedAt: null },
+      data: { voidedAt: new Date(), voidReason: dto.reason, voidedById: dto.userId },
+    });
+    return count > 0 ? 'updated' : this.missingOrInvalid(dto.id);
+  }
+
+  async unvoidById(id: number): Promise<PurchaseDocumentStateChange> {
+    const { count } = await prisma.purchaseDocument.updateMany({
+      where: { id, voidedAt: { not: null } },
+      data: { voidedAt: null, voidReason: null, voidedById: null },
+    });
+    return count > 0 ? 'updated' : this.missingOrInvalid(id);
+  }
+
+  private async missingOrInvalid(id: number): Promise<PurchaseDocumentStateChange> {
+    const exists = await prisma.purchaseDocument.findUnique({ where: { id }, select: { id: true } });
+    return exists ? 'invalid_state' : 'not_found';
+  }
+
+  private buildWhere(filters: PurchaseDocumentFiltersDto): Prisma.PurchaseDocumentWhereInput {
+    const { type, supplierId, from, to, receiverNrc, status, withWarnings, pendingLink } = filters;
+
+    return {
+      ...(type && { type }),
+      ...(supplierId && { supplierId }),
+      ...((from || to) && {
+        issueDate: { ...(from && { gte: toDate(from) }), ...(to && { lte: toDate(to) }) },
+      }),
+      ...(receiverNrc && { receiverNrc }),
+      ...(status === 'active' && { voidedAt: null }),
+      ...(status === 'voided' && { voidedAt: { not: null } }),
+      ...(withWarnings && { warnings: { not: Prisma.DbNull } }),
+      ...(pendingLink && {
+        relatedDocuments: { some: { generationType: ELECTRONIC_GENERATION, relatedDocumentId: null } },
+      }),
+    };
+  }
+
   async findExistingGenerationCodes(generationCodes: string[]): Promise<string[]> {
     if (generationCodes.length === 0) return [];
 

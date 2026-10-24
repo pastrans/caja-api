@@ -29,7 +29,11 @@ export class PurchaseDocumentRoutes {
       limits: { files: MAX_FILES, fileSize: MAX_FILE_SIZE },
     });
 
+    router.get('/', requireAdmin, controller.getDocuments);
+    router.get('/:id', requireAdmin, controller.getDocumentById);
     router.post('/import', requireAdmin, upload.array('files', MAX_FILES), controller.importDocuments);
+    router.patch('/:id/void', requireAdmin, controller.voidDocument);
+    router.patch('/:id/unvoid', requireAdmin, controller.unvoidDocument);
 
     return router;
   }

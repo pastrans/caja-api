@@ -26,10 +26,10 @@ Pendientes detectados en el análisis del proyecto (octubre 2026), escritos como
 | US-18 | Dashboard de ventas | — | ✅ Hecho (rama `staging`) |
 | US-19 | Catálogo de proveedores | — | ✅ Hecho (rama `staging`) |
 | US-20 | Importación masiva de DTE de compras | — | ✅ Hecho (rama `staging`) |
-| US-21 | Vincular notas de crédito con su crédito fiscal | — | En parte: falta el filtro `pendingLink` (va con US-22) |
-| US-22 | Consultar documentos de compra | — | Pendiente |
-| US-23 | Anular y reactivar documentos de compra | — | Pendiente |
-| US-24 | Reportes de compras e IVA | — | Pendiente |
+| US-21 | Vincular notas de crédito con su crédito fiscal | — | ✅ Hecho (rama `staging`) |
+| US-22 | Consultar documentos de compra | — | ✅ Hecho (rama `staging`) |
+| US-23 | Anular y reactivar documentos de compra | — | ✅ Hecho (rama `staging`) |
+| US-24 | Reportes de compras e IVA | — | ✅ Hecho (rama `staging`) |
 
 ---
 
@@ -195,7 +195,7 @@ Hoy `OpenCashRegister` hace `findActive()` y luego `open()` sin transacción, y 
 
 ## 📥 Registro de compras (DTE)
 
-Registrar los Documentos Tributarios Electrónicos de compra (créditos fiscales y notas de crédito) a partir de su JSON, para controlar compras e IVA. Diseño técnico, reglas de lectura del JSON y modelo de datos: [compras-dte.md](./compras-dte.md).
+Registrar los Documentos Tributarios Electrónicos de compra (créditos fiscales y notas de crédito) a partir de su JSON, para controlar compras e IVA. Diseño técnico, reglas de lectura del JSON y modelo de datos: [compras-dte.md](./compras-dte.md). Referencia de endpoints: [compras-api.md](./compras-api.md).
 
 Todas las historias son solo para `ADMIN`. El frontend vive en otro repositorio; cada historia necesita su pantalla allí.
 
