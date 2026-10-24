@@ -24,6 +24,12 @@ Pendientes detectados en el análisis del proyecto (octubre 2026), escritos como
 | US-16 | Tests automatizados y linter | 🟢 | Pendiente |
 | US-17 | Despliegue con Docker y scripts de producción | 🟢 | Pendiente |
 | US-18 | Dashboard de ventas | — | ✅ Hecho (rama `staging`) |
+| US-19 | Catálogo de proveedores | — | Pendiente |
+| US-20 | Importación masiva de DTE de compras | — | Pendiente |
+| US-21 | Vincular notas de crédito con su crédito fiscal | — | Pendiente |
+| US-22 | Consultar documentos de compra | — | Pendiente |
+| US-23 | Anular y reactivar documentos de compra | — | Pendiente |
+| US-24 | Reportes de compras e IVA | — | Pendiente |
 
 ---
 
@@ -184,6 +190,87 @@ Hoy `OpenCashRegister` hace `findActive()` y luego `open()` sin transacción, y 
 - `npm start` solo ejecuta `node dist/app.js`; la compilación queda en `npm run build`.
 - `npm run dev` no ejecuta `prisma migrate dev` en cada arranque.
 - Hay un `Dockerfile` multi-stage para la API.
+
+---
+
+## 📥 Registro de compras (DTE)
+
+Registrar los Documentos Tributarios Electrónicos de compra (créditos fiscales y notas de crédito) a partir de su JSON, para controlar compras e IVA. Diseño técnico, reglas de lectura del JSON y modelo de datos: [compras-dte.md](./compras-dte.md).
+
+Todas las historias son solo para `ADMIN`. El frontend vive en otro repositorio; cada historia necesita su pantalla allí.
+
+### US-19 — Catálogo de proveedores
+**Como** administrador, **quiero** que los proveedores se registren solos a partir de los documentos que importo, **para** no tener que darlos de alta a mano y poder ver las compras por proveedor.
+
+**Criterios de aceptación**
+- Al importar un DTE, el emisor se busca por NIT; si no existe se crea con NIT, NRC, nombre, nombre comercial, actividad económica, teléfono y correo.
+- Si ya existe, sus datos se actualizan con los del documento más reciente (por fecha de emisión).
+- `GET /api/v1/suppliers`: listado paginado con búsqueda por nombre o NIT.
+- `GET /api/v1/suppliers/:id`: detalle del proveedor.
+- Los proveedores no se crean, editan ni borran manualmente.
+
+### US-20 — Importación masiva de DTE de compras
+**Como** administrador, **quiero** subir varios archivos JSON de facturas a la vez, **para** registrar mis compras sin capturarlas a mano.
+
+**Criterios de aceptación**
+- `POST /api/v1/purchase-documents/import` recibe archivos `.json` (multipart). Máximo 100 archivos por carga y 1 MB por archivo.
+- Solo se acepta el JSON; el PDF no se sube ni se guardan archivos en disco.
+- Lee archivos en UTF-8 y en Latin-1 (varios proveedores envían Latin-1).
+- Se aceptan solo créditos fiscales (`tipoDte = 03`) y notas de crédito (`tipoDte = 05`).
+- Un archivo se **rechaza** si:
+  - no es un JSON válido o no tiene la estructura de un DTE;
+  - su tipo no es `03` ni `05`;
+  - es del ambiente de pruebas (`ambiente ≠ 01`);
+  - no tiene sello de recepción (se busca en `selloRecibido` y en `respuestaHacienda.selloRecibido`);
+  - el NRC del receptor no está en `RECEIVER_NRCS`;
+  - su código de generación ya está registrado o se repite dentro de la misma carga.
+- Un archivo se importa **con advertencia** si:
+  - Hacienda lo recibió con observaciones (se guardan las observaciones);
+  - sus totales no cuadran (IVA ≠ 13 % del gravado, o suma de líneas ≠ total gravado, con tolerancia de $0.01).
+- La carga es parcial: los archivos válidos se importan aunque otros fallen. La respuesta trae el resultado por archivo (`imported`, `rejected` con motivo, `warnings`) y un conteo total.
+- Se guardan encabezado, totales, líneas de detalle y el JSON original completo.
+- Cada documento queda asociado al usuario que lo importó.
+
+### US-21 — Vincular notas de crédito con su crédito fiscal
+**Como** administrador, **quiero** que cada nota de crédito quede ligada al crédito fiscal que modifica, **para** conocer el monto neto real de cada compra.
+
+**Criterios de aceptación**
+- Al importar una nota de crédito, cada `documentoRelacionado` electrónico (`tipoGeneracion = 2`) se vincula con el crédito fiscal que tenga ese código de generación.
+- Si el crédito fiscal aún no está registrado, la relación queda **pendiente de vincular** y la respuesta de la carga lo advierte.
+- Al importar después ese crédito fiscal, las notas pendientes se vinculan solas, también si ambos vienen en la misma carga y en cualquier orden.
+- Las relaciones con documentos físicos (`tipoGeneracion = 1`) se guardan pero no se intentan vincular.
+- `GET /api/v1/purchase-documents?pendingLink=true` lista las notas de crédito pendientes de vincular.
+- El aviso es solo en la aplicación; no se envía correo.
+
+### US-22 — Consultar documentos de compra
+**Como** administrador, **quiero** buscar y ver el detalle de mis documentos de compra, **para** revisar lo que he importado.
+
+**Criterios de aceptación**
+- `GET /api/v1/purchase-documents`: listado paginado, ordenado por fecha de emisión descendente, con filtros por tipo, proveedor, rango de fechas, NRC receptor, estado (activo / anulado), con advertencias y pendientes de vincular.
+- `GET /api/v1/purchase-documents/:id`: encabezado, totales, líneas, proveedor, documentos relacionados (en ambos sentidos), advertencias y datos de anulación.
+- Los documentos no se pueden editar.
+
+### US-23 — Anular y reactivar documentos de compra
+**Como** administrador, **quiero** anular un documento importado, **para** sacarlo de los reportes cuando no corresponde, y poder revertirlo si me equivoco.
+
+**Criterios de aceptación**
+- `PATCH /api/v1/purchase-documents/:id/void` con `reason` obligatorio; guarda motivo, fecha y usuario.
+- `PATCH /api/v1/purchase-documents/:id/unvoid` reactiva el documento y limpia los datos de anulación.
+- Anular un documento ya anulado, o reactivar uno activo, responde `400`.
+- Los documentos anulados no cuentan en ningún reporte.
+- Anular un crédito fiscal con notas de crédito vinculadas lo permite, pero la respuesta lo advierte.
+- Anular en el sistema no anula nada en Hacienda; eso solo lo hace el emisor.
+
+### US-24 — Reportes de compras e IVA
+**Como** administrador, **quiero** ver el IVA de mis compras y cuánto le compro a cada proveedor, **para** controlar mi crédito fiscal y mis gastos.
+
+**Criterios de aceptación**
+- Cada documento cuenta en el mes de su fecha de emisión.
+- Las notas de crédito restan; los documentos anulados no cuentan. Las notas pendientes de vincular sí cuentan.
+- `GET /api/v1/purchase-reports/iva-summary?year=`: por mes, compras gravadas, IVA crédito fiscal (13 %), IVA percibido (1 %), notas de crédito y neto.
+- `GET /api/v1/purchase-reports/summary?from=&to=`: total de compras, IVA, percepción y número de documentos en el rango.
+- `GET /api/v1/purchase-reports/by-supplier?from=&to=`: totales por proveedor con porcentaje del total.
+- Todos los reportes aceptan filtro por NRC receptor.
 
 ---
 
