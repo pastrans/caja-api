@@ -9,6 +9,7 @@ import {
   PaginationDto,
   ParsedDte,
   VoidPurchaseDocumentDto,
+  SupplierProductHistory,
 } from '../../domain';
 
 export class PurchaseDocumentRepositoryImpl implements PurchaseDocumentRepository {
@@ -36,5 +37,9 @@ export class PurchaseDocumentRepositoryImpl implements PurchaseDocumentRepositor
 
   unvoidById(id: number): Promise<PurchaseDocumentStateChange> {
     return this.datasource.unvoidById(id);
+  }
+
+  getSupplierProductHistory(supplierNit: string, productRefs: string[]): Promise<SupplierProductHistory> {
+    return this.datasource.getSupplierProductHistory(supplierNit, productRefs);
   }
 }

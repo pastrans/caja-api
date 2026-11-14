@@ -9,6 +9,7 @@ import {
   PurchaseDocumentFiltersDto,
   PurchaseDocumentPaginatedResult,
   PurchaseDocumentStateChange,
+  SupplierProductHistory,
   VoidPurchaseDocumentDto,
 } from '../../domain';
 
@@ -196,6 +197,41 @@ export class PurchaseDocumentDatasourceImpl implements PurchaseDocumentDatasourc
       }
       throw error;
     }
+  }
+
+  // Para los avisos de la importación: formato de las líneas del proveedor y unidades de cada producto
+  async getSupplierProductHistory(supplierNit: string, productRefs: string[]): Promise<SupplierProductHistory> {
+    const [counts] = await prisma.$queryRaw<{ lines: number; described: number }[]>`
+      SELECT
+        count(*)::int AS "lines",
+        count(*) FILTER (WHERE i."description" ~ '^\\s*\\d{6,}\\s*\\|')::int AS "described"
+      FROM "PurchaseDocumentItem" i
+      JOIN "PurchaseDocument" d ON d."id" = i."documentId"
+      JOIN "Supplier" s ON s."id" = d."supplierId"
+      WHERE s."nit" = ${supplierNit}
+    `;
+
+    const units = productRefs.length === 0 ? [] : await prisma.$queryRaw<{ ref: string; unit: number; lines: number }[]>`
+      SELECT i."productRef" AS "ref", i."unitOfMeasure" AS "unit", count(*)::int AS "lines"
+      FROM "PurchaseDocumentItem" i
+      JOIN "PurchaseDocument" d ON d."id" = i."documentId"
+      JOIN "Supplier" s ON s."id" = d."supplierId"
+      WHERE s."nit" = ${supplierNit}
+        AND d."type" = 'CREDITO_FISCAL'
+        AND i."productRef" = ANY(${productRefs}::text[])
+      GROUP BY i."productRef", i."unitOfMeasure"
+    `;
+
+    const unitsByRef: SupplierProductHistory['units'] = {};
+    for (const row of units) {
+      (unitsByRef[row.ref] ??= []).push({ unit: Number(row.unit), lines: Number(row.lines) });
+    }
+
+    return {
+      lines: Number(counts?.lines ?? 0),
+      describedCodeLines: Number(counts?.described ?? 0),
+      units: unitsByRef,
+    };
   }
 
   // El proveedor se identifica por NIT; sus datos se actualizan con los del DTE más reciente

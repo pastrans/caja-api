@@ -1,4 +1,5 @@
 import { DateHelper } from './date.helper';
+import { ProductRefHelper } from './product-ref.helper';
 import {
   DteFile,
   DteItemData,
@@ -149,11 +150,15 @@ export class DteParser {
   private static parseItem(item: unknown): DteItemData {
     if (!this.isObject(item)) throw new StructureError('cuerpoDocumento items must be objects');
 
+    const code = this.str(item.codigo);
+    const description = this.required(this.str(item.descripcion), 'cuerpoDocumento.descripcion');
+    const product = ProductRefHelper.extract(code, description);
+
     return {
       itemNumber: this.required(this.int(item.numItem), 'cuerpoDocumento.numItem'),
       itemType: this.required(this.int(item.tipoItem), 'cuerpoDocumento.tipoItem'),
-      code: this.str(item.codigo),
-      description: this.required(this.str(item.descripcion), 'cuerpoDocumento.descripcion'),
+      code,
+      description,
       quantity: this.required(this.num(item.cantidad), 'cuerpoDocumento.cantidad'),
       unitOfMeasure: this.required(this.int(item.uniMedida), 'cuerpoDocumento.uniMedida'),
       unitPrice: this.required(this.num(item.precioUni), 'cuerpoDocumento.precioUni'),
@@ -162,6 +167,8 @@ export class DteParser {
       exemptSale: this.num(item.ventaExenta) ?? 0,
       taxedSale: this.num(item.ventaGravada) ?? 0,
       relatedDocumentCode: this.str(item.numeroDocumento),
+      productRef: product.ref,
+      productName: product.name,
     };
   }
 

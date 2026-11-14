@@ -27,12 +27,7 @@ interface RawPricePointRow {
 
 type ProductRef = { unitOfMeasure: number; ref: string };
 
-// Cómo se identifica un producto en las líneas del DTE (detalle y ejemplos en docs/productos-api.md):
-// 1. Con código propio: el código en mayúsculas.
-// 2. Código dentro de la descripción (Avícola Salvadoreña): "25003131|PLU:|ALIMIAU ADULTO 420 g|..." o el formato
-//    anterior "43002523 |  | SALCHICHA ... | 10." → código = 1er campo, nombre = 3er campo (o el 2º si el 3º viene vacío).
-// 3. Sin código: el texto antes del primer '|' (Hernández agrega a veces el código de barras después), en mayúsculas
-//    y con espacios normalizados.
+// El producto de cada línea (productRef / productName) se calcula al importar con ProductRefHelper.
 // Si el producto es una variante (ProductVariant), sus compras se cuentan como del producto principal.
 // El precio sale del precio de lista menos el descuento de la línea (cantidad × precio − descuento), no del monto:
 // el monto viene redondeado a centavos y en cantidades chicas mueve el precio unitario.
@@ -47,19 +42,8 @@ export class PurchaseProductDatasourceImpl implements PurchaseProductDatasource 
         SELECT
           d."supplierId" AS supplier_id,
           i."unitOfMeasure" AS unit,
-          CASE
-            WHEN nullif(btrim(i."code"), '') IS NOT NULL AND btrim(i."code") <> 'PLU:' THEN upper(btrim(i."code"))
-            WHEN i."description" ~ '^\\s*\\d{6,}\\s*\\|' THEN btrim(split_part(i."description", '|', 1))
-            ELSE upper(regexp_replace(btrim(split_part(i."description", '|', 1)), '\\s+', ' ', 'g'))
-          END AS ref,
-          CASE
-            WHEN nullif(btrim(i."code"), '') IS NOT NULL AND btrim(i."code") <> 'PLU:' THEN btrim(i."description")
-            WHEN i."description" ~ '^\\s*\\d{6,}\\s*\\|' THEN coalesce(
-              nullif(btrim(split_part(i."description", '|', 3)), ''),
-              btrim(split_part(i."description", '|', 2))
-            )
-            ELSE btrim(split_part(i."description", '|', 1))
-          END AS name,
+          i."productRef" AS ref,
+          i."productName" AS name,
           d."id" AS document_id,
           d."controlNumber" AS control_number,
           d."issueDate" AS issue_date,
@@ -72,6 +56,7 @@ export class PurchaseProductDatasourceImpl implements PurchaseProductDatasource 
           AND d."voidedAt" IS NULL
           AND d."issueDate" BETWEEN ${from}::date AND ${to}::date
           AND (${supplierId}::int IS NULL OR d."supplierId" = ${supplierId}::int)
+          AND i."productRef" IS NOT NULL
           AND i."quantity" > 0
           -- Bonificaciones: las rotuladas "(BONIFICACIÓN)", las de monto 0 y las facturadas a $0.01
           -- (Sello de Oro regala producto a un centavo con el mismo código que la venta normal)

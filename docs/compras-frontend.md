@@ -178,6 +178,8 @@ Advertencias (`warnings[].code`). Todas tienen la forma `{ code, message }`:
 | `MH_OBSERVATIONS` | Importación, listado y detalle | Hacienda lo recibió con observaciones (el documento es válido) |
 | `TOTALS_MISMATCH` | Importación, listado y detalle | Los totales del documento no cuadran (error del proveedor; el documento es válido) |
 | `PENDING_LINK` | Solo en la importación | Nota de crédito pendiente de vincular: falta importar su crédito fiscal |
+| `PRODUCT_FORMAT_CHANGED` | Solo en la importación | El proveedor cambió el formato de sus productos: algunas líneas no traen el código de siempre |
+| `PRODUCT_UNIT_CHANGED` | Solo en la importación | Un producto se facturó en una unidad distinta de la habitual (por ejemplo, por bolsa en vez de por libra) |
 | `HAS_CREDIT_NOTES` | Solo en la respuesta de anular | Este crédito fiscal tiene notas de crédito activas que siguen contando en los reportes |
 
 En el listado y el detalle, "pendiente de vincular" no viene en `warnings` sino en `pendingLinks` (`string[]` con los códigos de los créditos fiscales que faltan). Muestra la insignia cuando `pendingLinks` no esté vacío.

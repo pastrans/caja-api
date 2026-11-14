@@ -7,6 +7,13 @@ export interface PurchaseDocumentPaginatedResult {
   total: number;
 }
 
+// Lo que ya se le compró a un proveedor, para avisar al importar si sus productos cambian de formato o de unidad
+export interface SupplierProductHistory {
+  lines: number;               // Líneas de todos sus documentos
+  describedCodeLines: number;  // Líneas con el código del producto al inicio de la descripción
+  units: Record<string, { unit: number; lines: number }[]>; // Cuántas líneas de cada código pedido hubo en cada unidad (créditos fiscales)
+}
+
 // Resultado de anular/reactivar: el cambio se aplica solo si el documento está en el estado esperado
 export type PurchaseDocumentStateChange = 'updated' | 'not_found' | 'invalid_state';
 
@@ -20,4 +27,6 @@ export abstract class PurchaseDocumentDatasource {
   abstract findById(id: number): Promise<PurchaseDocumentEntity | null>;
   abstract voidById(dto: VoidPurchaseDocumentDto): Promise<PurchaseDocumentStateChange>;
   abstract unvoidById(id: number): Promise<PurchaseDocumentStateChange>;
+  // productRefs: códigos de producto del documento que se está importando
+  abstract getSupplierProductHistory(supplierNit: string, productRefs: string[]): Promise<SupplierProductHistory>;
 }

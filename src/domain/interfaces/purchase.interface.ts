@@ -17,7 +17,14 @@ export type DteRejectionCode =
   | 'DUPLICATE'
   | 'INTERNAL_ERROR';
 
-export type DteWarningCode = 'MH_OBSERVATIONS' | 'TOTALS_MISMATCH' | 'PENDING_LINK';
+// PRODUCT_* solo salen en la respuesta de la importación (no se guardan): avisan que el análisis de precios
+// va a ver un producto nuevo donde probablemente es el mismo de siempre
+export type DteWarningCode =
+  | 'MH_OBSERVATIONS'
+  | 'TOTALS_MISMATCH'
+  | 'PENDING_LINK'
+  | 'PRODUCT_FORMAT_CHANGED'
+  | 'PRODUCT_UNIT_CHANGED';
 
 export interface DteRejection {
   reason: DteRejectionCode;
@@ -67,6 +74,8 @@ export interface DteItemData {
   exemptSale: number;
   taxedSale: number;
   relatedDocumentCode: string | null;
+  productRef: string;  // Código del producto para el análisis de precios (ProductRefHelper)
+  productName: string;
 }
 
 export interface DteRelationData {
@@ -154,7 +163,8 @@ export interface PurchaseRelatedDocument extends DteRelationData {
   document: PurchaseDocumentReference | null; // null: pendiente de vincular o documento físico
 }
 
-export type PurchaseDocumentItem = DteItemData;
+// El detalle del documento no expone el producto calculado para el análisis de precios
+export type PurchaseDocumentItem = Omit<DteItemData, 'productRef' | 'productName'>;
 
 export interface PurchaseVoidWarning {
   code: 'HAS_CREDIT_NOTES';

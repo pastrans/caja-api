@@ -32,9 +32,10 @@ Pendientes detectados en el análisis del proyecto (octubre 2026), escritos como
 | US-24 | Reportes de compras e IVA | — | ✅ Hecho (rama `staging`) |
 | US-25 | Análisis de precios de productos | — | ✅ Hecho (rama `staging`) |
 | US-26 | Unir variantes de un mismo producto | 🟡 | ✅ Hecho (rama `staging`) |
-| US-27 | Guardar el código del producto al importar | 🟢 | Pendiente |
-| US-28 | Descontar del precio las devoluciones de producto | 🟢 | Pendiente |
+| US-27 | Guardar el código del producto al importar | 🟢 | ✅ Hecho (rama `staging`) |
+| US-28 | Devoluciones de producto en el análisis de precios | 🟢 | Pendiente |
 | US-29 | Comparar un producto entre proveedores | 🟢 | Pendiente |
+| US-30 | Devoluciones en la página del proveedor | 🟢 | Pendiente |
 
 ---
 
@@ -313,14 +314,28 @@ Seguir el precio de lo que se compra a cada proveedor a partir de las líneas de
 - La importación advierte cuando una línea de Avícola Salvadoreña no tiene el formato `código|...`.
 - El análisis de precios usa los campos guardados en lugar de calcularlos en cada consulta.
 
-### US-28 — Descontar del precio las devoluciones de producto 🟢
-**Como** administrador, **quiero** que las notas de crédito por devolución de un producto se reflejen en su precio, **para** ver lo que realmente pagué.
+**Implementación:** columnas `productRef` y `productName` en `PurchaseDocumentItem`, calculadas por `ProductRefHelper` al importar y por la migración `20261115000000_add_item_product_ref` para las líneas existentes (idénticas al cálculo anterior en las 20,309 líneas). La importación responde con `PRODUCT_FORMAT_CHANGED` (un proveedor que siempre manda el código en la descripción deja de hacerlo) y `PRODUCT_UNIT_CHANGED` (un producto llega en una unidad que fue menos del 10 % de sus compras anteriores); no se guardan en el documento.
 
-**Contexto:** las notas de crédito son el 3.65 % de las compras. La mayoría es `DESCUENTO POR MERMA` (general, sin producto), pero hay devoluciones de producto de Avícola Campestre (`POLLO EN 1/4 PECHUGA SIN ALA`, $6,004).
+### US-28 — Devoluciones de producto en el análisis de precios 🟢
+**Como** administrador, **quiero** ver qué compras de un producto fueron devueltas, **para** que la cantidad y el gasto reflejen lo que realmente me quedé.
+
+**Contexto (revisión de las notas de crédito, 15/11/2026):** las líneas de nota de crédito con código de producto casi siempre son **devoluciones al mismo precio**, no rebajas: 101 devoluciones totales ($7,641) y 25 parciales ($1,515), contra 6 rebajas de precio ($103). Una devolución al mismo precio no cambia el precio por unidad, solo la cantidad y el gasto. Las de Avícola Salvadoreña usan otra unidad (99 o 59) para devolver lo facturado por libra, así que se relacionan por código, cantidad y precio, no por unidad. El `DESCUENTO POR MERMA` ($16,783, Avícola Campestre) es por factura y **queda fuera del precio** (decisión del 15/11/2026).
 
 **Criterios de aceptación**
-- Las líneas de nota de crédito con el código de un producto ajustan el precio de ese producto en la compra que modifican.
-- Los descuentos generales (sin código de producto) no se reparten entre productos y se siguen viendo solo en los reportes.
+- Cada línea de nota de crédito con código de producto se relaciona con la compra (crédito fiscal) que modifica.
+- En la gráfica de precios, la compra devuelta se marca (total o parcial) y aparece además un punto de devolución en la fecha de la nota de crédito, con la cantidad devuelta.
+- El precio de una compra devuelta sigue contando para la variación y la tendencia; la cantidad y el gasto del producto se muestran netos de lo devuelto.
+- En la lista de compras del producto, cada compra indica si fue devuelta y cuánto.
+- Las rebajas de precio (misma cantidad, precio menor) bajan el precio de esa compra.
+
+### US-30 — Devoluciones en la página del proveedor 🟢
+**Como** administrador, **quiero** ver en la página de cada proveedor lo que le devolví, **para** saber cuánto y qué productos devuelvo más.
+
+**Criterios de aceptación**
+- Resumen del periodo (mismo selector de fechas de la página): monto devuelto, número de devoluciones y % sobre lo comprado.
+- Lista de devoluciones: fecha, producto, cantidad, monto, y enlaces a la nota de crédito y a la factura original.
+- Productos más devueltos, por monto, con enlace al análisis de precios de cada uno.
+- Los descuentos por merma no se cuentan como devoluciones de producto.
 
 ### US-29 — Comparar un producto entre proveedores 🟢
 **Como** administrador, **quiero** agrupar productos equivalentes de distintos proveedores, **para** comparar quién me vende más barato.

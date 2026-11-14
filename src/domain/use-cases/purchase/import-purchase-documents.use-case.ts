@@ -1,4 +1,5 @@
 import { DteParser } from '../../helpers/dte-parser.helper';
+import { ProductImportWarningsHelper } from '../../helpers/product-import-warnings.helper';
 import { PurchaseDocumentRepository } from '../../repositories';
 import {
   DteFile,
@@ -82,6 +83,10 @@ export class ImportPurchaseDocuments implements ImportPurchaseDocumentsUseCase {
 
   private async save(file: string, dte: ParsedDte, importedById: number): Promise<ImportFileResult> {
     try {
+      // Antes de guardar, para comparar con lo que ya se le había comprado al proveedor
+      const history = await this.repository.getSupplierProductHistory(dte.supplier.nit, ProductImportWarningsHelper.productRefs(dte));
+      const productWarnings = ProductImportWarningsHelper.compute(dte, history);
+
       const created = await this.repository.create(dte, importedById);
       // Otra carga simultánea pudo registrar el mismo documento
       if (created.status === 'duplicate') return this.duplicate(file, dte.generationCode);
@@ -98,7 +103,7 @@ export class ImportPurchaseDocuments implements ImportPurchaseDocumentsUseCase {
         type: dte.type,
         generationCode: dte.generationCode,
         linkedCreditNotes: created.linkedCreditNotes,
-        warnings: [...dte.warnings, ...pendingLinkWarnings],
+        warnings: [...dte.warnings, ...pendingLinkWarnings, ...productWarnings],
       };
     } catch (error) {
       console.error(`Error importing DTE ${dte.generationCode}:`, error);

@@ -83,6 +83,10 @@ La importación es parcial: responde `200` aunque algunos archivos se rechacen. 
 | `MH_OBSERVATIONS` | Hacienda lo recibió con observaciones |
 | `TOTALS_MISMATCH` | IVA, suma de líneas o total a pagar no cuadran (tolerancia $0.01) |
 | `PENDING_LINK` | Nota de crédito cuyo crédito fiscal aún no está registrado |
+| `PRODUCT_FORMAT_CHANGED` | El proveedor siempre manda el código del producto al inicio de la descripción y alguna línea no lo trae: el análisis de precios la verá como un producto nuevo ([productos-api.md](./productos-api.md)) |
+| `PRODUCT_UNIT_CHANGED` | Un producto que ya se compraba llegó en una unidad de medida inusual (menos del 10 % de sus compras anteriores), por ejemplo por bolsa en vez de por libra |
+
+`PENDING_LINK` y los `PRODUCT_*` solo salen en esta respuesta; no se guardan en el documento.
 
 Errores de la petición completa (`400`): sin archivos, campo distinto de `files`, más de 100 archivos o un archivo de más de 1 MB.
 

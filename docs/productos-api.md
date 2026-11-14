@@ -9,7 +9,7 @@ Endpoints para seguir el precio de los productos que se compran a los proveedore
 ## Cómo se arma el análisis
 
 - **Qué líneas cuentan:** solo créditos fiscales activos. No cuentan las notas de crédito, los documentos anulados, las líneas sin cantidad ni las bonificaciones. Se toma como bonificación (producto regalado) la línea rotulada `(BONIFICACIÓN) ...`, la de monto 0 y la de precio unitario de $0.01 o menos.
-- **Qué es un producto:** proveedor + unidad de medida + código. El código se obtiene así, en este orden:
+- **Qué es un producto:** proveedor + unidad de medida + código. El código y el nombre se calculan al importar cada línea y se guardan en ella (`productRef`, `productName`; `ProductRefHelper`). Las reglas, en este orden:
   1. El código de la línea, en mayúsculas, si viene y no es `PLU:`.
   2. Si la descripción empieza con un número de 6 o más dígitos seguido de `|`, ese número. Es el formato de Avícola Salvadoreña, que manda el producto dentro de la descripción: `25003131|PLU:|ALIMIAU ADULTO 420 g|12 UN|...` o el formato anterior `43002523 |  | SALCHICHA DE POL PICANT FRANKS 400 g 12U | 10.`. El nombre es el tercer campo (o el segundo si el tercero viene vacío).
   3. Si no hay código: el texto antes del primer `|`, en mayúsculas y con espacios normalizados. Hernández Hermanos agrega a veces el código de barras después (`CHORIZO BARBACOA 454 g 8U| 7410031421379|`). Si el proveedor cambia la redacción, cuenta como otro producto (ver [Hallazgos](#hallazgos-en-los-datos-de-los-proveedores)).
@@ -183,13 +183,13 @@ Se eligió unirlos a mano, con sugerencias: normalizar los nombres automáticame
 
 **Avícola facturó por bolsa en enero y abril de 2026.** Algunos productos que siempre se facturan por libra (`ALA FRESCA BOLSA`, $1.38/lb) aparecen en esas facturas por unidad (bolsa de ≈ 16 lb a $24.19). Son productos distintos para el análisis y no se sugiere unirlos: mezclarían precios por libra con precios por bolsa.
 
-**2. El código de Avícola depende del formato del texto (prioridad baja).** Si Avícola cambia otra vez cómo arma la descripción, sus productos se partirían sin aviso. Conviene extraer el código y el nombre del producto al importar, guardarlos en la línea y advertir en la importación cuando una línea de un proveedor conocido no tenga el formato esperado.
+**2. El código de Avícola depende del formato del texto — resuelto (US-27).** El código y el nombre se guardan en cada línea al importar (las líneas existentes se calcularon en la migración `20261115000000_add_item_product_ref`, con resultado idéntico al cálculo anterior en las 20,309 líneas). La importación avisa con `PRODUCT_FORMAT_CHANGED` si un proveedor que siempre manda el código en la descripción deja de hacerlo, y con `PRODUCT_UNIT_CHANGED` si un producto llega en una unidad inusual (el caso de Avícola facturando por bolsa).
 
 **3. Las notas de crédito no se descuentan del precio (prioridad baja).** Equivalen al 3.65 % de las compras. La mayoría es `DESCUENTO POR MERMA` ($16,783), un descuento general que no corresponde a un producto. Una parte sí son devoluciones de producto: `POLLO EN 1/4 PECHUGA SIN ALA` ($6,004) y `POLLO EN 1/4 MUSLO` ($1,670), de Avícola Campestre. Para esos productos, el precio real pagado es algo menor que el que muestra el análisis.
 
 **4. No se puede comparar el mismo producto entre proveedores (prioridad baja).** Cada proveedor usa sus propios códigos y nombres, así que la pechuga de Avícola Campestre y la de Sello de Oro son productos distintos para el sistema. Compararlas requiere un catálogo propio de productos al que se asignen los de cada proveedor.
 
-**5. El historial es corto y disparejo (acción fuera del sistema).** La tendencia necesita al menos 4 compras en 60 días; en los últimos 12 meses, 96 de 226 productos no llegan a ese mínimo. Además, cada proveedor empieza en una fecha distinta:
+**5. El historial de cada proveedor empieza en una fecha distinta (no requiere acción).** Están todas las facturas: cada historial empieza cuando se le empezó a comprar a ese proveedor. La tendencia necesita al menos 4 compras en 60 días; en los últimos 12 meses, 96 de 226 productos no llegan a ese mínimo porque se compran poco, y se muestran como "pocas compras":
 
 | Proveedor | Primer documento | Documentos |
 |---|---|---|
@@ -201,4 +201,4 @@ Se eligió unirlos a mano, con sugerencias: normalizar los nombres automáticame
 | San Valentín | 24/07/2025 | 8 |
 | Bimbo | 05/05/2026 | 1 |
 
-Si existen los JSON de compras anteriores (sobre todo de Avícola Salvadoreña y Hernández), importarlos alarga el historial y hace más confiables las tendencias. La importación ignora los duplicados, así que se puede subir la carpeta completa.
+Al comparar periodos largos ("todo el historial") hay que tener en cuenta que, por ejemplo, Avícola Salvadoreña solo tiene datos desde diciembre 2024.
