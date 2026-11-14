@@ -31,7 +31,7 @@ Pendientes detectados en el análisis del proyecto (octubre 2026), escritos como
 | US-23 | Anular y reactivar documentos de compra | — | ✅ Hecho (rama `staging`) |
 | US-24 | Reportes de compras e IVA | — | ✅ Hecho (rama `staging`) |
 | US-25 | Análisis de precios de productos | — | ✅ Hecho (rama `staging`) |
-| US-26 | Unir variantes de un mismo producto | 🟡 | Pendiente |
+| US-26 | Unir variantes de un mismo producto | 🟡 | ✅ Hecho (rama `staging`) |
 | US-27 | Guardar el código del producto al importar | 🟢 | Pendiente |
 | US-28 | Descontar del precio las devoluciones de producto | 🟢 | Pendiente |
 | US-29 | Comparar un producto entre proveedores | 🟢 | Pendiente |
@@ -302,6 +302,8 @@ Seguir el precio de lo que se compra a cada proveedor a partir de las líneas de
 - Se pueden asignar una o más variantes (código o nombre + unidad de medida) a un producto principal del mismo proveedor, y deshacer la asignación.
 - El listado y el historial muestran el producto principal con las compras de todas sus variantes.
 - Opcional: sugerir variantes probables (mismo proveedor, nombre parecido, mismo precio en fechas que no se traslapan) para confirmarlas con un clic.
+
+**Implementación:** tabla `ProductVariant` (variante → principal, sin cadenas) y `ProductSuggestionDismissal` (sugerencias descartadas). Endpoints `GET /purchase-products/suggestions`, `POST /purchase-products/suggestions/dismiss`, `GET|POST|DELETE /purchase-products/merges`. Las sugerencias agrupan por nombre normalizado y no mezclan unidades con precios distintos (Avícola facturó por bolsa lo que factura por libra). Detalle en [productos-api.md](./productos-api.md#variantes-unir-el-mismo-producto-con-otro-nombre-o-código).
 
 ### US-27 — Guardar el código del producto al importar 🟢
 **Como** administrador, **quiero** que el código y el nombre del producto se extraigan al importar el DTE, **para** enterarme si un proveedor cambia el formato en lugar de que sus productos se partan sin aviso.

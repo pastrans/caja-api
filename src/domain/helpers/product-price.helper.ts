@@ -7,6 +7,7 @@ import {
   ProductPriceProjection,
   ProductPriceStats,
   ProductPriceTrend,
+  ProductSummary,
 } from '../interfaces/purchase-product.interface';
 
 const DAYS_PER_MONTH = 30.4375;
@@ -38,6 +39,26 @@ export class ProductKeyHelper {
     const match = /^(\d+):(\d+):(.+)$/.exec(key);
     if (!match) return null;
     return { supplierId: Number(match[1]), unitOfMeasure: Number(match[2]), ref: match[3]! };
+  }
+
+  // Clave sin proveedor ("unidad:código"), para filtrar productos de un proveedor ya conocido
+  static localKey(unitOfMeasure: number, ref: string): string {
+    return `${unitOfMeasure}:${ref}`;
+  }
+}
+
+// Agrupa nombres que suelen ser el mismo producto escrito distinto (Hernández cambió "454 G" por "454 g 8U").
+// Es solo una sugerencia: el usuario confirma antes de unir
+export class ProductNameHelper {
+  static signature(name: string): string {
+    return name
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .toUpperCase()
+      .replace(/\bDESCUENTO\b/g, ' ')                               // "... 6U Descuento"
+      .replace(/\b\d+\s*U\b/g, ' ')                                 // empaque: 8U, 24U, "10 U"
+      .replace(/(\d+(?:\.\d+)?)\s*(GRAMOS|GRS|GR|G)\b/g, '$1')      // "454 G", "200 GRS", "325 GRAMOS" → número
+      .replace(/[^A-Z0-9.]+/g, ' ')
+      .trim();
   }
 }
 
@@ -97,6 +118,23 @@ export class ProductPriceHelper {
       changePct: pct(firstPrice, lastPrice),
       lastChangePct: previousPrice === null ? null : pct(previousPrice, lastPrice),
       trend: this.trend(rows),
+      variants: 0, // Lo completa el caso de uso con las variantes guardadas
+    };
+  }
+
+  // Resumen corto de un producto (para variantes y sugerencias); rows ordenados por fecha
+  static summary(rows: ProductPricePointRow[]): ProductSummary {
+    const first = rows[0]!;
+    const last = rows[rows.length - 1]!;
+    return {
+      key: ProductKeyHelper.build(last.supplierId, last.unitOfMeasure, last.ref),
+      ref: last.ref,
+      name: last.name,
+      unitOfMeasure: last.unitOfMeasure,
+      purchases: rows.length,
+      firstDate: first.issueDate,
+      lastDate: last.issueDate,
+      lastPrice: round(this.unitPrice(last), 4),
     };
   }
 

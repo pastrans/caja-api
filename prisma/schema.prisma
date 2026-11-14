@@ -55,6 +55,10 @@ model User {
   // Auditoría de compras (quién importó y quién anuló cada documento)
   importedPurchaseDocuments PurchaseDocument[] @relation("PurchaseDocumentImportedBy")
   voidedPurchaseDocuments   PurchaseDocument[] @relation("PurchaseDocumentVoidedBy")
+
+  // Auditoría del análisis de precios (quién unió variantes o descartó sugerencias)
+  productVariants             ProductVariant[]
+  productSuggestionDismissals ProductSuggestionDismissal[]
 }
 
 model Employee {
@@ -172,7 +176,9 @@ model Supplier {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
-  documents PurchaseDocument[]
+  documents                   PurchaseDocument[]
+  productVariants             ProductVariant[]
+  productSuggestionDismissals ProductSuggestionDismissal[]
 }
 
 model PurchaseDocument {
@@ -256,4 +262,41 @@ model CreditNoteRelation {
 
   @@unique([creditNoteId, relatedDocumentNumber])
   @@index([relatedDocumentNumber])
+}
+
+// ----------------------------------------------------
+// ANÁLISIS DE PRECIOS DE PRODUCTOS
+// ----------------------------------------------------
+
+// Un producto de un proveedor (unidad + código) que es el mismo que otro: sus compras se suman al principal.
+// Los productos no tienen tabla propia, se deducen de las líneas de los DTE (ver docs/productos-api.md)
+model ProductVariant {
+  id                  Int      @id @default(autoincrement())
+  supplierId          Int
+  unitOfMeasure       Int
+  ref                 String // Código de la variante
+  targetUnitOfMeasure Int
+  targetRef           String // Código del producto principal (nunca es a su vez una variante)
+  createdById         Int
+  createdAt           DateTime @default(now())
+
+  supplier  Supplier @relation(fields: [supplierId], references: [id])
+  createdBy User     @relation(fields: [createdById], references: [id])
+
+  @@unique([supplierId, unitOfMeasure, ref])
+  @@index([supplierId, targetUnitOfMeasure, targetRef])
+}
+
+// Sugerencia de variantes que el usuario marcó como "no son el mismo producto": no se vuelve a sugerir
+model ProductSuggestionDismissal {
+  id          Int      @id @default(autoincrement())
+  supplierId  Int
+  signature   String // Nombre normalizado que agrupó la sugerencia
+  createdById Int
+  createdAt   DateTime @default(now())
+
+  supplier  Supplier @relation(fields: [supplierId], references: [id])
+  createdBy User     @relation(fields: [createdById], references: [id])
+
+  @@unique([supplierId, signature])
 }

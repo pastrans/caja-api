@@ -3,7 +3,7 @@ import { PurchaseProductRepository } from '../../repositories';
 import { PaginatedResponse } from '../../interfaces/paginated-response.interface';
 import { ProductPriceStats, ProductsTrendSummary } from '../../interfaces/purchase-product.interface';
 import { PaginationHelper } from '../../helpers/pagination.helper';
-import { ProductPriceHelper } from '../../helpers/product-price.helper';
+import { ProductKeyHelper, ProductPriceHelper } from '../../helpers/product-price.helper';
 
 export interface PurchaseProductsResponse extends PaginatedResponse<ProductPriceStats> {
   months: number | null;
@@ -27,9 +27,22 @@ export class GetPurchaseProducts implements GetPurchaseProductsUseCase {
   ) {}
 
   async execute(dto: PurchaseProductsDto, paginationDto: PaginationDto): Promise<PurchaseProductsResponse> {
-    const rows = await this.repository.getPricePoints({ from: dto.from, to: dto.to, supplierId: dto.supplierId, product: null });
+    const [rows, variants] = await Promise.all([
+      this.repository.getPricePoints({ from: dto.from, to: dto.to, supplierId: dto.supplierId, products: null, resolveVariants: true }),
+      this.repository.getVariants(dto.supplierId),
+    ]);
 
-    let products = [...ProductPriceHelper.groupByProduct(rows).values()].map((group) => ProductPriceHelper.stats(group));
+    // Cuántas variantes tiene unidas cada producto principal
+    const variantCount = new Map<string, number>();
+    for (const v of variants) {
+      const key = ProductKeyHelper.build(v.supplierId, v.targetUnitOfMeasure, v.targetRef);
+      variantCount.set(key, (variantCount.get(key) ?? 0) + 1);
+    }
+
+    let products = [...ProductPriceHelper.groupByProduct(rows).values()].map((group) => {
+      const stats = ProductPriceHelper.stats(group);
+      return { ...stats, variants: variantCount.get(stats.key) ?? 0 };
+    });
 
     if (dto.search) {
       const term = normalize(dto.search);

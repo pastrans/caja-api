@@ -1,12 +1,21 @@
 import { Request, Response, NextFunction } from 'express';
 import {
   CustomError,
+  DismissProductSuggestion,
+  DismissProductSuggestionDto,
+  GetProductMergeSuggestions,
+  GetProductMerges,
   GetPurchaseProductHistory,
   GetPurchaseProducts,
+  MergeProducts,
+  MergeProductsDto,
   PaginationDto,
+  ProductSupplierFilterDto,
   PurchaseProductHistoryDto,
   PurchaseProductRepository,
   PurchaseProductsDto,
+  UnmergeProduct,
+  UnmergeProductDto,
 } from '../../domain';
 
 export class PurchaseProductsController {
@@ -35,6 +44,56 @@ export class PurchaseProductsController {
     new GetPurchaseProductHistory(this.purchaseProductRepository)
       .execute(historyDto!)
       .then((history) => res.json(history))
+      .catch(next);
+  };
+
+  public getSuggestions = (req: Request, res: Response, next: NextFunction) => {
+    const [error, filterDto] = ProductSupplierFilterDto.create(req.query);
+    if (error) return next(CustomError.badRequest(error));
+
+    new GetProductMergeSuggestions(this.purchaseProductRepository)
+      .execute(filterDto!)
+      .then((suggestions) => res.json(suggestions))
+      .catch(next);
+  };
+
+  public dismissSuggestion = (req: Request, res: Response, next: NextFunction) => {
+    const [error, dismissDto] = DismissProductSuggestionDto.create({ ...req.body, userId: req.user!.id });
+    if (error) return next(CustomError.badRequest(error));
+
+    new DismissProductSuggestion(this.purchaseProductRepository)
+      .execute(dismissDto!)
+      .then(() => res.status(204).send())
+      .catch(next);
+  };
+
+  public getMerges = (req: Request, res: Response, next: NextFunction) => {
+    const [error, filterDto] = ProductSupplierFilterDto.create(req.query);
+    if (error) return next(CustomError.badRequest(error));
+
+    new GetProductMerges(this.purchaseProductRepository)
+      .execute(filterDto!)
+      .then((merges) => res.json(merges))
+      .catch(next);
+  };
+
+  public merge = (req: Request, res: Response, next: NextFunction) => {
+    const [error, mergeDto] = MergeProductsDto.create({ ...req.body, userId: req.user!.id });
+    if (error) return next(CustomError.badRequest(error));
+
+    new MergeProducts(this.purchaseProductRepository)
+      .execute(mergeDto!)
+      .then((result) => res.json(result))
+      .catch(next);
+  };
+
+  public unmerge = (req: Request, res: Response, next: NextFunction) => {
+    const [error, unmergeDto] = UnmergeProductDto.create(req.query);
+    if (error) return next(CustomError.badRequest(error));
+
+    new UnmergeProduct(this.purchaseProductRepository)
+      .execute(unmergeDto!)
+      .then(() => res.status(204).send())
       .catch(next);
   };
 }

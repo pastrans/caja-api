@@ -24,6 +24,13 @@ export class PurchaseProductRoutes {
     router.get('/', requireAdmin, controller.getProducts);
     router.get('/history', requireAdmin, controller.getHistory);
 
+    // Variantes: el mismo producto con otro código o nombre (US-26)
+    router.get('/suggestions', requireAdmin, controller.getSuggestions);
+    router.post('/suggestions/dismiss', requireAdmin, controller.dismissSuggestion);
+    router.get('/merges', requireAdmin, controller.getMerges);
+    router.post('/merges', requireAdmin, controller.merge);
+    router.delete('/merges', requireAdmin, controller.unmerge); // ?key= de la variante
+
     return router;
   }
 }

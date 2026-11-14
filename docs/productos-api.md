@@ -86,6 +86,73 @@ Historial de precios de un producto. Acepta `months` (por defecto `12`). `404` s
 - `points`: una compra por documento, de la más antigua a la más reciente.
 - `monthly`: solo los meses con compras. `avgPrice` es el promedio ponderado por cantidad.
 - `projection`: precio estimado 1, 2 y 3 meses después de la última compra si la tendencia sigue igual. Vacío si `trend` es `null`. Es una extrapolación lineal, no un pronóstico.
+- Si `key` es una variante, responde con su producto principal (`product.key` es la del principal).
+- `variants`: variantes unidas al producto, cada una con su historial propio completo (no solo el del periodo): `key`, `ref`, `name`, `unitOfMeasure`, `purchases`, `firstDate`, `lastDate`, `lastPrice`, `createdAt` y `createdBy` (nombre de quien la unió).
+
+## Variantes: unir el mismo producto con otro nombre o código
+
+Cuando un proveedor cambia el nombre o el código de un producto, el análisis lo ve como dos productos y su historial queda partido. Una variante se une a un producto principal **del mismo proveedor**: desde ese momento sus compras se cuentan como del principal en el listado, el historial y la tendencia. No se modifican los documentos y se puede deshacer.
+
+- El principal nunca es a su vez una variante. Si se une un producto que ya tiene variantes, sus variantes pasan al nuevo principal; si se elige como principal una variante, se usa su principal.
+- Se pueden unir productos con distinta unidad de medida, pero solo tiene sentido si el precio se refiere a lo mismo (el frontend pide confirmarlo).
+- En el listado, `variants` dice cuántas variantes tiene unidas cada producto.
+
+### `GET /api/v1/purchase-products/suggestions`
+
+Grupos de productos del mismo proveedor que parecen el mismo, sobre todo el historial. Acepta `supplierId`. Ordenados por número de compras, de mayor a menor.
+
+```json
+[
+  {
+    "supplierId": 4, "supplierName": "HERNANDEZ, HERMANOS SA DE CV",
+    "signature": "CHORIZO BARBACOA 454", "suggestedKey": "4:59:CHORIZO BARBACOA 454 G 8U", "sameUnit": true,
+    "products": [
+      { "key": "4:59:CHORIZO BARBACOA 454 G 8U", "ref": "CHORIZO BARBACOA 454 G 8U", "name": "CHORIZO BARBACOA 454 g 8U",
+        "unitOfMeasure": 59, "purchases": 51, "firstDate": "2025-05-08", "lastDate": "2026-10-19", "lastPrice": 1.77 },
+      { "key": "4:59:CHORIZO BARBACOA 454 G", "ref": "CHORIZO BARBACOA 454 G", "name": "CHORIZO BARBACOA 454 g",
+        "unitOfMeasure": 59, "purchases": 12, "firstDate": "2025-01-03", "lastDate": "2025-04-21", "lastPrice": 1.5894 }
+    ]
+  }
+]
+```
+
+- **Cómo se agrupan:** por el nombre normalizado (`signature`): sin acentos, en mayúsculas, sin la palabra `Descuento`, sin el empaque (`8U`, `24U`) y con los gramos como número (`454 G`, `454 g`, `454 GRAMOS` → `454`).
+- `suggestedKey`: el principal sugerido, el producto con más compras.
+- Con distinta unidad de medida solo se sugiere si el último precio es parecido (hasta 1.5 veces). Si no, es otra forma de vender el producto y se deja fuera: Avícola facturó un par de veces por bolsa (≈ $24) lo que siempre factura por libra (≈ $1.38). `sameUnit: false` avisa que el grupo mezcla unidades con precio parecido.
+- No aparecen los productos ya unidos ni las sugerencias descartadas.
+
+### `POST /api/v1/purchase-products/suggestions/dismiss`
+
+Marca una sugerencia como "no son el mismo producto" para que no se vuelva a mostrar. Body: `{ "supplierId": 4, "signature": "CHORIZO BARBACOA 454" }`. Responde `204`.
+
+### `GET /api/v1/purchase-products/merges`
+
+Uniones guardadas, agrupadas por producto principal, de la más reciente a la más antigua. Acepta `supplierId`.
+
+```json
+[
+  {
+    "supplierId": 4, "supplierName": "HERNANDEZ, HERMANOS SA DE CV",
+    "product": { "key": "4:59:CHORIZO BARBACOA 454 G 8U", "name": "CHORIZO BARBACOA 454 g 8U", "purchases": 51, "...": "..." },
+    "variants": [
+      { "key": "4:59:CHORIZO BARBACOA 454 G", "name": "CHORIZO BARBACOA 454 g", "purchases": 12, "...": "...",
+        "createdAt": "2026-11-14T15:02:11.000Z", "createdBy": "Carlos" }
+    ]
+  }
+]
+```
+
+`product` y cada variante traen su historial propio (sin sumar las variantes), con el mismo formato que en las sugerencias.
+
+### `POST /api/v1/purchase-products/merges`
+
+Une variantes a un producto principal. Body: `{ "targetKey": "4:59:CHORIZO BARBACOA 454 G 8U", "variantKeys": ["4:59:CHORIZO BARBACOA 454 G"] }` (hasta 50 variantes). Responde `{ "key": "<principal>", "variants": 1 }`.
+
+`400` si una clave no tiene la forma `supplierId:unitOfMeasure:código`, si los productos son de distintos proveedores, si una variante es el mismo principal o si algún producto no tiene compras registradas.
+
+### `DELETE /api/v1/purchase-products/merges?key=`
+
+Separa una variante (`key`): vuelve a ser un producto propio con su historial. Responde `204`; `404` si ese producto no es una variante.
 
 ## Hallazgos en los datos de los proveedores
 
@@ -102,7 +169,7 @@ Revisión de la base local (13/11/2026): 2,716 documentos, 20,309 líneas y 7 pr
 
 ### Pendientes
 
-**1. Hernández Hermanos renombra sus productos (prioridad media).** El mismo producto, al mismo precio, cambió de nombre con el tiempo, así que su historial queda partido justo donde cambió el nombre:
+**1. Hernández Hermanos renombra sus productos — se resuelve uniendo variantes (US-26, ver [Variantes](#variantes-unir-el-mismo-producto-con-otro-nombre-o-código)).** El mismo producto, al mismo precio, cambió de nombre con el tiempo, así que su historial queda partido justo donde cambió el nombre:
 
 | Nombre | Desde | Hasta | Compras | Precio |
 |---|---|---|---|---|
@@ -110,12 +177,11 @@ Revisión de la base local (13/11/2026): 2,716 documentos, 20,309 líneas y 7 pr
 | CHORIZO BARBACOA 454 g | 11/02/2025 | 21/04/2025 | 9 | $1.59 |
 | CHORIZO BARBACOA 454 g 8U | 08/05/2025 | 19/10/2026 | 51 | $1.59 – $1.77 |
 
-Las diferencias de mayúsculas ya se unen (las dos primeras filas cuentan como un producto con 12 compras), pero el cambio a `454 g 8U` lo parte en dos. Pasa lo mismo con el tocino (`200 GRS` → `200 g` → `200 g 8U`), la mortadela, la longaniza, la salchicha de pollo y la pechuga de pavo. Hernández aparece con 47 "productos" que son unos 20 reales, y la variación y la tendencia de sus productos principales solo cubren desde mayo de 2025. Hay dos caminos:
+Las diferencias de mayúsculas ya se unen (las dos primeras filas cuentan como un producto con 12 compras), pero el cambio a `454 g 8U` lo parte en dos. Pasa lo mismo con el tocino (`200 GRS` → `200 g` → `200 g 8U`), la mortadela, la longaniza, la salchicha de pollo y la pechuga de pavo. Hernández aparece con 47 "productos" que son unos 20 reales.
 
-- **Unirlos a mano (recomendado):** una tabla de equivalencias editable desde el frontend ("estos nombres son el mismo producto"). Es exacto y sirve para cualquier proveedor.
-- **Normalizar automáticamente:** quitar el sufijo de empaque (`8U`, `24U`), la palabra `Descuento` y unificar `G` / `GRS` / `GRAMOS`. Es rápido, pero es una heurística: no sabe si `CHORIZO ARGENTINO 454 g 8U`, `CHORIZO ARGENTINO BANDEJA 454 g 8U` y `CHORIZO ARGENTINO SUPER 454 g` son el mismo producto.
+Se eligió unirlos a mano, con sugerencias: normalizar los nombres automáticamente uniría de más (no sabe si `CHORIZO ARGENTINO 454 g 8U`, `CHORIZO ARGENTINO BANDEJA 454 g 8U` y `CHORIZO ARGENTINO SUPER 454 g` son el mismo producto). Las sugerencias encuentran 22 grupos: 9 de Hernández, 6 de Sello de Oro (cambió el código de productos como `PECHUGOSAS 310g` a inicios de 2024), 5 de San Valentín (mismo código con unidad 59 y 99, al mismo precio) y 2 de Avícola Salvadoreña.
 
-San Valentín tiene el caso contrario: 5 códigos que aparecen con dos unidades de medida (59 unidad y 99 otra), y cada uno queda partido en dos. Son 35 líneas; la misma tabla de equivalencias lo resolvería.
+**Avícola facturó por bolsa en enero y abril de 2026.** Algunos productos que siempre se facturan por libra (`ALA FRESCA BOLSA`, $1.38/lb) aparecen en esas facturas por unidad (bolsa de ≈ 16 lb a $24.19). Son productos distintos para el análisis y no se sugiere unirlos: mezclarían precios por libra con precios por bolsa.
 
 **2. El código de Avícola depende del formato del texto (prioridad baja).** Si Avícola cambia otra vez cómo arma la descripción, sus productos se partirían sin aviso. Conviene extraer el código y el nombre del producto al importar, guardarlos en la línea y advertir en la importación cuando una línea de un proveedor conocido no tenga el formato esperado.
 

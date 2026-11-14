@@ -47,6 +47,7 @@ export interface ProductPriceStats {
   changePct: number;            // Última vs. primera compra del periodo
   lastChangePct: number | null; // Última vs. anterior
   trend: ProductPriceTrend | null; // null si no hay datos suficientes
+  variants: number; // Variantes unidas a este producto (sus compras ya están sumadas)
 }
 
 export interface ProductPricePoint {
@@ -82,3 +83,48 @@ export interface ProductsTrendSummary {
 }
 
 export type PurchaseProductSort = 'spent' | 'change' | 'trend' | 'name' | 'recent';
+
+// ---------- Variantes (el mismo producto con otro código o nombre) ----------
+
+export interface ProductVariantRow {
+  supplierId: number;
+  unitOfMeasure: number;
+  ref: string;
+  targetUnitOfMeasure: number;
+  targetRef: string;
+  createdAt: Date;
+  createdBy: string;
+}
+
+// Resumen de un producto sin unir variantes (todo el historial)
+export interface ProductSummary {
+  key: string;
+  ref: string;
+  name: string;
+  unitOfMeasure: number;
+  purchases: number;
+  firstDate: string;
+  lastDate: string;
+  lastPrice: number;
+}
+
+export interface ProductVariantInfo extends ProductSummary {
+  createdAt: Date;
+  createdBy: string;
+}
+
+export interface ProductMerge {
+  supplierId: number;
+  supplierName: string;
+  product: ProductSummary; // Principal, con las compras de todas sus variantes
+  variants: ProductVariantInfo[];
+}
+
+export interface ProductMergeSuggestion {
+  supplierId: number;
+  supplierName: string;
+  signature: string; // Nombre normalizado que los agrupa; se usa para descartar la sugerencia
+  suggestedKey: string; // Producto principal sugerido: el que tiene más compras
+  sameUnit: boolean; // false si mezcla unidades de medida (revisar antes de unir)
+  products: ProductSummary[];
+}
