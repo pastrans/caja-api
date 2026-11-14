@@ -34,6 +34,6 @@ export class GetPurchasesBySupplier implements GetPurchasesBySupplierUseCase {
       // Ordenados de mayor a menor compra
       .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
 
-    return { from: dto.from, to: dto.to, receiverNrc: dto.receiverNrc, total, suppliers };
+    return { from: dto.from, to: dto.to, receiverNrc: dto.receiverNrc, supplierId: dto.supplierId, total, suppliers };
   }
 }

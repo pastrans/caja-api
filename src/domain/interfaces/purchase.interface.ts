@@ -203,6 +203,7 @@ export interface PurchaseMonthSummary extends PurchaseTotalsBreakdown {
 export interface PurchaseIvaSummary {
   year: number;
   receiverNrc: string | null;
+  supplierId: number | null;
   months: PurchaseMonthSummary[];
   total: PurchaseTotalsBreakdown;
 }
@@ -211,6 +212,7 @@ export interface PurchaseSummary extends PurchaseTotalsBreakdown {
   from: string;
   to: string;
   receiverNrc: string | null;
+  supplierId: number | null;
 }
 
 export interface SupplierPurchases extends PurchaseNetTotals {
@@ -226,6 +228,7 @@ export interface PurchasesBySupplier {
   from: string;
   to: string;
   receiverNrc: string | null;
+  supplierId: number | null;
   total: number;
   suppliers: SupplierPurchases[];
 }

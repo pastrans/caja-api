@@ -22,6 +22,7 @@ export class GetPurchaseIvaSummary implements GetPurchaseIvaSummaryUseCase {
     return {
       year: dto.year,
       receiverNrc: dto.receiverNrc,
+      supplierId: dto.supplierId,
       months,
       total: PurchaseTotalsHelper.breakdown(rows),
     };

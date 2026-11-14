@@ -1,6 +1,6 @@
 # Compras API (DTE)
 
-Endpoints para registrar y consultar las compras a partir de los DTE (créditos fiscales y notas de crédito). Diseño y reglas de lectura del JSON: [compras-dte.md](./compras-dte.md).
+Endpoints para registrar y consultar las compras a partir de los DTE (créditos fiscales y notas de crédito). Diseño y reglas de lectura del JSON: [compras-dte.md](./compras-dte.md). Pantallas, flujos y reglas de la interfaz: [compras-frontend.md](./compras-frontend.md).
 
 - **Auth:** `Authorization: Bearer <token>` de un usuario con rol `ADMIN` (cualquier otro rol recibe 403).
 - **Fechas:** formato `YYYY-MM-DD`, inclusivas. Cada documento cuenta en el día de su fecha de emisión (`issueDate`).
@@ -127,7 +127,8 @@ Listado paginado, del más reciente al más antiguo (por fecha de emisión). Sin
 
 - `operationCondition`: 1 contado, 2 crédito, 3 otro (informativo).
 - `totals.total`: `operationTotal + ivaPerceived - ivaWithheld - incomeTaxWithheld`.
-- `pendingLinks`: códigos de los créditos fiscales que la nota de crédito modifica y que aún no están registrados.
+- `warnings`: `{ code, message }[]`, igual que en la importación. Aquí solo aparecen las que se guardan al importar: `MH_OBSERVATIONS` y `TOTALS_MISMATCH`. Ejemplo: `[{ "code": "MH_OBSERVATIONS", "message": "RECIBIDO CON OBSERVACIONES: [[resumen.totalDescu] Calculo incorrecto]" }]`.
+- `pendingLinks`: `string[]` con los códigos de generación de los créditos fiscales que la nota de crédito modifica y que aún no están registrados. Ejemplo: `["14C892E4-85B7-4C46-8305-F25D8B89D00C"]`. Se calcula en cada consulta, así que se vacía solo al importar el crédito fiscal. Por eso `PENDING_LINK` no aparece en `warnings`: solo existe en la respuesta de la importación.
 - `voided`: `null` si está activo; si no, `{ "voidedAt", "reason", "voidedBy": { "id", "name" } }`.
 
 Los enlaces `next` y `prev` solo conservan `page` y `limit`, igual que en el resto de la API.
@@ -192,7 +193,12 @@ Reactiva un documento anulado y borra los datos de anulación. Sin body. Respond
 
 Solo cuentan los documentos activos. Las notas de crédito se muestran aparte y restan en `net`. Las notas pendientes de vincular sí cuentan.
 
-Todos aceptan `receiverNrc` para filtrar por NRC del receptor.
+Todos aceptan estos filtros opcionales, y la respuesta devuelve los que se aplicaron (`null` si no):
+
+| Query | Descripción |
+|---|---|
+| `receiverNrc` | NRC del receptor |
+| `supplierId` | Solo las compras de ese proveedor. Si no compró en el periodo, los totales salen en cero (útil para la ficha del proveedor) |
 
 Cada reporte usa estos bloques:
 
@@ -211,6 +217,7 @@ Resumen de IVA por mes. Devuelve siempre los 12 meses (en cero los que no tienen
 {
   "year": 2026,
   "receiverNrc": null,
+  "supplierId": null,
   "months": [
     {
       "month": "2026-10",
@@ -232,9 +239,11 @@ Total de compras en un rango.
 | `from` | Primer día del mes de `to` | Fecha inicial |
 | `to` | Hoy (zona `TIMEZONE`) | Fecha final |
 
+La respuesta siempre incluye el `from` y `to` usados, también cuando se calcularon por defecto: el frontend puede llamar sin fechas en la primera carga y tomar el rango de la respuesta.
+
 ```json
 {
-  "from": "2026-10-01", "to": "2026-10-23", "receiverNrc": null,
+  "from": "2026-10-01", "to": "2026-10-23", "receiverNrc": null, "supplierId": null,
   "creditosFiscales": { "documents": 38, "...": "..." },
   "notasCredito": { "documents": 11, "...": "..." },
   "net": { "total": 13429.25, "ivaCredit": 1604.38, "...": "..." }
@@ -247,7 +256,7 @@ Compras netas por proveedor en un rango (mismos `from` y `to` que `/summary`), d
 
 ```json
 {
-  "from": "2026-10-01", "to": "2026-10-31", "receiverNrc": null,
+  "from": "2026-10-01", "to": "2026-10-31", "receiverNrc": null, "supplierId": null,
   "total": 13429.25,
   "suppliers": [
     { "supplierId": 1, "name": "Avicola Salvadoreña S.A.", "nit": "06141305710012",

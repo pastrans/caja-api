@@ -7,16 +7,25 @@ const validateNrc = (receiverNrc: unknown): string | undefined =>
     ? 'receiverNrc must contain only digits'
     : undefined;
 
+// supplierId opcional: limita el reporte a un proveedor (sin compras, los totales salen en cero)
+const parseSupplierId = (supplierId: unknown): [string, undefined] | [undefined, number | null] => {
+  if (supplierId === undefined) return [undefined, null];
+  const value = Number(supplierId);
+  if (!Number.isInteger(value) || value <= 0) return ['supplierId must be a positive integer', undefined];
+  return [undefined, value];
+};
+
 // Rango de fechas de los reportes de compras (por defecto, el mes en curso)
 export class PurchaseReportDto {
   private constructor(
     public readonly from: string,
     public readonly to: string,
     public readonly receiverNrc: string | null,
+    public readonly supplierId: number | null,
   ) {}
 
   static create(props: { [key: string]: any }, timezone: string): [string, undefined] | [undefined, PurchaseReportDto] {
-    const { from, to, receiverNrc } = props;
+    const { from, to, receiverNrc, supplierId } = props;
 
     const toDate = to ?? DateHelper.today(timezone);
     const fromDate = from ?? DateHelper.startOfMonth(toDate);
@@ -28,7 +37,10 @@ export class PurchaseReportDto {
     const nrcError = validateNrc(receiverNrc);
     if (nrcError) return [nrcError, undefined];
 
-    return [undefined, new PurchaseReportDto(fromDate, toDate, receiverNrc ?? null)];
+    const [supplierError, supplier] = parseSupplierId(supplierId);
+    if (supplierError) return [supplierError, undefined];
+
+    return [undefined, new PurchaseReportDto(fromDate, toDate, receiverNrc ?? null, supplier!)];
   }
 }
 
@@ -37,10 +49,11 @@ export class PurchaseYearReportDto {
   private constructor(
     public readonly year: number,
     public readonly receiverNrc: string | null,
+    public readonly supplierId: number | null,
   ) {}
 
   static create(props: { [key: string]: any }, timezone: string): [string, undefined] | [undefined, PurchaseYearReportDto] {
-    const { year, receiverNrc } = props;
+    const { year, receiverNrc, supplierId } = props;
 
     const currentYear = Number(DateHelper.today(timezone).slice(0, 4));
     const value = year !== undefined ? Number(year) : currentYear;
@@ -51,6 +64,9 @@ export class PurchaseYearReportDto {
     const nrcError = validateNrc(receiverNrc);
     if (nrcError) return [nrcError, undefined];
 
-    return [undefined, new PurchaseYearReportDto(value, receiverNrc ?? null)];
+    const [supplierError, supplier] = parseSupplierId(supplierId);
+    if (supplierError) return [supplierError, undefined];
+
+    return [undefined, new PurchaseYearReportDto(value, receiverNrc ?? null, supplier!)];
   }
 }

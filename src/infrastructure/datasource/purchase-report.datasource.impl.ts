@@ -11,19 +11,27 @@ import {
 
 type RawTotalsRow = { [key in keyof PurchaseTotalsRow]: string | number };
 
+interface ReportFilters {
+  from: string;
+  to: string;
+  receiverNrc: string | null;
+  supplierId: number | null;
+}
+
 // issueDate es DATE (sin hora): los rangos y los meses no dependen de la zona horaria.
 // Solo cuentan los documentos activos; las notas de crédito se suman aparte y el dominio las resta.
 export class PurchaseReportDatasourceImpl implements PurchaseReportDatasource {
   async getTotalsByMonth(dto: PurchaseYearReportDto): Promise<PurchaseTotalsRow[]> {
-    return this.aggregate(Prisma.sql`to_char(d."issueDate", 'YYYY-MM')`, `${dto.year}-01-01`, `${dto.year}-12-31`, dto.receiverNrc);
+    const { year, receiverNrc, supplierId } = dto;
+    return this.aggregate(Prisma.sql`to_char(d."issueDate", 'YYYY-MM')`, { from: `${year}-01-01`, to: `${year}-12-31`, receiverNrc, supplierId });
   }
 
   async getTotals(dto: PurchaseReportDto): Promise<PurchaseTotalsRow[]> {
-    return this.aggregate(Prisma.sql`'all'`, dto.from, dto.to, dto.receiverNrc);
+    return this.aggregate(Prisma.sql`'all'`, dto);
   }
 
   async getTotalsBySupplier(dto: PurchaseReportDto): Promise<SupplierPurchaseTotalsRow[]> {
-    const rows = await this.aggregate(Prisma.sql`d."supplierId"::text`, dto.from, dto.to, dto.receiverNrc);
+    const rows = await this.aggregate(Prisma.sql`d."supplierId"::text`, dto);
 
     const suppliers = await prisma.supplier.findMany({
       where: { id: { in: [...new Set(rows.map((row) => Number(row.key)))] } },
@@ -34,7 +42,8 @@ export class PurchaseReportDatasourceImpl implements PurchaseReportDatasource {
     return rows.map((row) => ({ ...row, name: byId.get(row.key)?.name ?? '', nit: byId.get(row.key)?.nit ?? '' }));
   }
 
-  private async aggregate(key: Prisma.Sql, from: string, to: string, receiverNrc: string | null): Promise<PurchaseTotalsRow[]> {
+  private async aggregate(key: Prisma.Sql, filters: ReportFilters): Promise<PurchaseTotalsRow[]> {
+    const { from, to, receiverNrc, supplierId } = filters;
     const rows = await prisma.$queryRaw<RawTotalsRow[]>`
       SELECT
         ${key} AS "key",
@@ -51,6 +60,7 @@ export class PurchaseReportDatasourceImpl implements PurchaseReportDatasource {
       WHERE d."voidedAt" IS NULL
         AND d."issueDate" BETWEEN ${from}::date AND ${to}::date
         AND (${receiverNrc}::text IS NULL OR d."receiverNrc" = ${receiverNrc}::text)
+        AND (${supplierId}::int IS NULL OR d."supplierId" = ${supplierId}::int)
       GROUP BY 1, 2
       ORDER BY 1, 2
     `;

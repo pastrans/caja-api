@@ -333,6 +333,12 @@
                   "value": "1317457",
                   "description": "NRC del receptor",
                   "disabled": true
+                },
+                {
+                  "key": "supplierId",
+                  "value": "1",
+                  "description": "Solo las compras de ese proveedor (en cero si no compró)",
+                  "disabled": true
                 }
               ]
             },
@@ -374,6 +380,12 @@
                   "value": "1317457",
                   "description": "NRC del receptor",
                   "disabled": true
+                },
+                {
+                  "key": "supplierId",
+                  "value": "1",
+                  "description": "Solo las compras de ese proveedor (en cero si no compró)",
+                  "disabled": true
                 }
               ]
             },
@@ -414,6 +426,12 @@
                   "key": "receiverNrc",
                   "value": "1317457",
                   "description": "NRC del receptor",
+                  "disabled": true
+                },
+                {
+                  "key": "supplierId",
+                  "value": "1",
+                  "description": "Solo las compras de ese proveedor (en cero si no compró)",
                   "disabled": true
                 }
               ]

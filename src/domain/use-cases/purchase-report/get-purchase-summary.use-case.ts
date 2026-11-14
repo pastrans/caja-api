@@ -17,6 +17,7 @@ export class GetPurchaseSummary implements GetPurchaseSummaryUseCase {
       from: dto.from,
       to: dto.to,
       receiverNrc: dto.receiverNrc,
+      supplierId: dto.supplierId,
       ...PurchaseTotalsHelper.breakdown(rows),
     };
   }
