@@ -48,3 +48,7 @@ export * from './purchase/unvoid-purchase-document.use-case';
 export * from './purchase-report/get-purchase-iva-summary.use-case';
 export * from './purchase-report/get-purchase-summary.use-case';
 export * from './purchase-report/get-purchases-by-supplier.use-case';
+
+// Purchase product use cases
+export * from './purchase-product/get-purchase-products.use-case';
+export * from './purchase-product/get-purchase-product-history.use-case';

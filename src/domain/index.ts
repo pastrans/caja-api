@@ -8,6 +8,7 @@ export * from './interfaces/dashboard.interface';
 export * from './interfaces/auth-adapters.interface';
 export * from './interfaces/email-sender.interface';
 export * from './interfaces/purchase.interface';
+export * from './interfaces/purchase-product.interface';
 export * from './dtos/index';
 export * from './entities/index';
 export * from './errors/custom.error'

@@ -30,6 +30,11 @@ Pendientes detectados en el análisis del proyecto (octubre 2026), escritos como
 | US-22 | Consultar documentos de compra | — | ✅ Hecho (rama `staging`) |
 | US-23 | Anular y reactivar documentos de compra | — | ✅ Hecho (rama `staging`) |
 | US-24 | Reportes de compras e IVA | — | ✅ Hecho (rama `staging`) |
+| US-25 | Análisis de precios de productos | — | ✅ Hecho (rama `staging`) |
+| US-26 | Unir variantes de un mismo producto | 🟡 | Pendiente |
+| US-27 | Guardar el código del producto al importar | 🟢 | Pendiente |
+| US-28 | Descontar del precio las devoluciones de producto | 🟢 | Pendiente |
+| US-29 | Comparar un producto entre proveedores | 🟢 | Pendiente |
 
 ---
 
@@ -271,6 +276,56 @@ Todas las historias son solo para `ADMIN`. El frontend vive en otro repositorio;
 - `GET /api/v1/purchase-reports/summary?from=&to=`: total de compras, IVA, percepción y número de documentos en el rango.
 - `GET /api/v1/purchase-reports/by-supplier?from=&to=`: totales por proveedor con porcentaje del total.
 - Todos los reportes aceptan filtro por NRC receptor.
+
+---
+
+## 📈 Análisis de precios de productos
+
+Seguir el precio de lo que se compra a cada proveedor a partir de las líneas de los créditos fiscales. Reglas de cálculo, endpoints y hallazgos en los datos: [productos-api.md](./productos-api.md).
+
+### US-25 — Análisis de precios de productos
+**Como** administrador, **quiero** ver cómo cambia el precio de cada producto que compro, **para** saber cuánto han subido y hacia dónde van.
+
+**Criterios de aceptación**
+- `GET /api/v1/purchase-products`: productos del periodo (`months` = últimos N meses o `all`) con último precio, variación del periodo, tendencia mensual con su R² y gasto. Búsqueda sin acentos, filtro por proveedor, orden y paginación.
+- `GET /api/v1/purchase-products/history?key=`: compras una por una, resumen por mes y proyección a 3 meses si hay tendencia.
+- Solo cuentan los créditos fiscales activos. Se excluyen las notas de crédito y las bonificaciones (rotuladas, de monto 0 o de $0.01 o menos).
+- El precio es el de lista menos el descuento, sin IVA.
+- La tendencia no se calcula con menos de 4 compras o menos de 60 días.
+
+### US-26 — Unir variantes de un mismo producto 🟡
+**Como** administrador, **quiero** indicar que dos nombres o códigos de un proveedor son el mismo producto, **para** que su historial de precios no quede partido cuando el proveedor cambia la redacción.
+
+**Contexto:** Hernández Hermanos no manda código y renombró sus productos en mayo 2025 (`CHORIZO BARBACOA 454 g` → `CHORIZO BARBACOA 454 g 8U`, mismo precio): aparece con 47 productos que son unos 20 reales. San Valentín usa el mismo código con dos unidades de medida. Detalle en [productos-api.md](./productos-api.md#pendientes).
+
+**Criterios de aceptación**
+- Se pueden asignar una o más variantes (código o nombre + unidad de medida) a un producto principal del mismo proveedor, y deshacer la asignación.
+- El listado y el historial muestran el producto principal con las compras de todas sus variantes.
+- Opcional: sugerir variantes probables (mismo proveedor, nombre parecido, mismo precio en fechas que no se traslapan) para confirmarlas con un clic.
+
+### US-27 — Guardar el código del producto al importar 🟢
+**Como** administrador, **quiero** que el código y el nombre del producto se extraigan al importar el DTE, **para** enterarme si un proveedor cambia el formato en lugar de que sus productos se partan sin aviso.
+
+**Criterios de aceptación**
+- Cada línea guarda el código y el nombre de producto calculados con las reglas de [productos-api.md](./productos-api.md#cómo-se-arma-el-análisis) (migración que los calcula para las líneas existentes).
+- La importación advierte cuando una línea de Avícola Salvadoreña no tiene el formato `código|...`.
+- El análisis de precios usa los campos guardados en lugar de calcularlos en cada consulta.
+
+### US-28 — Descontar del precio las devoluciones de producto 🟢
+**Como** administrador, **quiero** que las notas de crédito por devolución de un producto se reflejen en su precio, **para** ver lo que realmente pagué.
+
+**Contexto:** las notas de crédito son el 3.65 % de las compras. La mayoría es `DESCUENTO POR MERMA` (general, sin producto), pero hay devoluciones de producto de Avícola Campestre (`POLLO EN 1/4 PECHUGA SIN ALA`, $6,004).
+
+**Criterios de aceptación**
+- Las líneas de nota de crédito con el código de un producto ajustan el precio de ese producto en la compra que modifican.
+- Los descuentos generales (sin código de producto) no se reparten entre productos y se siguen viendo solo en los reportes.
+
+### US-29 — Comparar un producto entre proveedores 🟢
+**Como** administrador, **quiero** agrupar productos equivalentes de distintos proveedores, **para** comparar quién me vende más barato.
+
+**Criterios de aceptación**
+- Existe un catálogo propio de productos al que se asignan los productos de cada proveedor.
+- Para un producto del catálogo se ve el precio de cada proveedor en el tiempo, en la misma unidad de medida.
 
 ---
 
