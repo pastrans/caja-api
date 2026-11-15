@@ -1,4 +1,4 @@
-import { ProductPricePointRow, ProductVariantRow } from '../interfaces/purchase-product.interface';
+import { ProductPricePointRow, ProductReturnRow, ProductVariantRow } from '../interfaces/purchase-product.interface';
 
 export interface ProductRef {
   unitOfMeasure: number;
@@ -17,6 +17,8 @@ export interface ProductPriceFilters {
 // las bonificaciones ni las líneas sin monto (no reflejan el precio de compra)
 export abstract class PurchaseProductDatasource {
   abstract getPricePoints(filters: ProductPriceFilters): Promise<ProductPricePointRow[]>;
+  // Líneas de notas de crédito activas sobre las compras de getPricePoints (mismos filtros, por la fecha de la compra)
+  abstract getReturns(filters: ProductPriceFilters): Promise<ProductReturnRow[]>;
   abstract getVariants(supplierId: number | null): Promise<ProductVariantRow[]>;
   abstract mergeProducts(supplierId: number, target: ProductRef, variants: ProductRef[], userId: number): Promise<ProductRef>;
   abstract unmergeVariant(supplierId: number, variant: ProductRef): Promise<boolean>;

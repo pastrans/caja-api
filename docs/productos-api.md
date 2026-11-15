@@ -15,6 +15,10 @@ Endpoints para seguir el precio de los productos que se compran a los proveedore
   3. Si no hay código: el texto antes del primer `|`, en mayúsculas y con espacios normalizados. Hernández Hermanos agrega a veces el código de barras después (`CHORIZO BARBACOA 454 g 8U| 7410031421379|`). Si el proveedor cambia la redacción, cuenta como otro producto (ver [Hallazgos](#hallazgos-en-los-datos-de-los-proveedores)).
   - Se identifica con `key` = `supplierId:unitOfMeasure:código`, por ejemplo `2:59:25003131`. El código puede traer espacios, `/` o `:`, así que se envía siempre en la query (`encodeURIComponent`).
 - **Precio de una compra:** precio de lista menos el descuento de la línea: (cantidad × precio unitario − descuento) / cantidad. No se usa el monto de la línea porque viene redondeado a centavos y, en cantidades chicas, mueve el precio (12 × $0.75 se factura como $9.01 y daría $0.7508). Si el producto viene en varias líneas del mismo DTE, se calcula un solo precio por documento, ponderado por cantidad. El gasto (`spent`, `amount`) sí es el monto facturado.
+- **Devoluciones:** las líneas de nota de crédito activas con el código de un producto se relacionan con la compra que modifican (por el código de generación de la línea y el código del producto, sin mirar la unidad: Avícola devuelve con unidad 99 o 59 lo facturado por libra). La merma no tiene código de un producto comprado y no se relaciona con ninguna compra; queda fuera del precio.
+  - **Devolución** (casi todas: mismo precio de la compra, con margen de 0.1 %): no cambia el precio; resta de la cantidad y del gasto.
+  - **Rebaja de precio** (misma cantidad, precio menor): baja el precio de esa compra y resta del gasto.
+  - Si una nota devuelve más de lo que se compró en esa línea, se limita a lo comprado.
 - **Variación** (`changePct`): última compra vs. primera compra del periodo, en %.
 - **Tendencia** (`trend`): regresión lineal del precio de cada compra contra la fecha.
   - `pctPerMonth`: pendiente en % del precio promedio por mes. `slopePerMonth`: lo mismo en dólares.
@@ -55,6 +59,7 @@ Productos comprados en el periodo, con sus estadísticas de precio. Paginado con
 ```
 
 - `summary` cuenta todos los productos que cumplen los filtros, no solo los de la página. `insufficient` = sin tendencia.
+- `quantity` y `spent` son netos de las notas de crédito sobre sus compras. `returnedQuantity` (solo devoluciones), `returnedAmount` (devoluciones y rebajas) y `returns` (número de líneas de nota de crédito) dicen cuánto se descontó.
 - `unitOfMeasure`: código del catálogo de Hacienda (CAT-014). En los datos actuales: `59` unidad, `36` libra, `99` otra.
 - `name`: el nombre de la compra más reciente.
 - La tendencia resume todo el periodo y puede no coincidir con la última compra: en el ejemplo la línea termina en $1.6965, pero la última compra salió más barata ($1.5487, −3.85 % respecto a la anterior).
@@ -83,8 +88,9 @@ Historial de precios de un producto. Acepta `months` (por defecto `12`). `404` s
 }
 ```
 
-- `points`: una compra por documento, de la más antigua a la más reciente.
-- `monthly`: solo los meses con compras. `avgPrice` es el promedio ponderado por cantidad.
+- `points`: una compra por documento, de la más antigua a la más reciente. `quantity` y `amount` son los de la factura; `unitPrice` ya trae las rebajas. `returnStatus` es `none`, `partial` o `total` (se devolvió toda la cantidad), con `returnedQuantity`, `returnedAmount` y `returns`: `[{ "date", "documentId", "controlNumber", "type": "return" | "price", "quantity", "amount" }]`, donde `documentId` es la nota de crédito.
+- `monthly`: `quantity` y `spent` netos, y `returnedAmount` del mes (por la fecha de la compra).
+- `monthly`: solo los meses con compras. `avgPrice` es el promedio ponderado por la cantidad comprada.
 - `projection`: precio estimado 1, 2 y 3 meses después de la última compra si la tendencia sigue igual. Vacío si `trend` es `null`. Es una extrapolación lineal, no un pronóstico.
 - Si `key` es una variante, responde con su producto principal (`product.key` es la del principal).
 - `variants`: variantes unidas al producto, cada una con su historial propio completo (no solo el del periodo): `key`, `ref`, `name`, `unitOfMeasure`, `purchases`, `firstDate`, `lastDate`, `lastPrice`, `createdAt` y `createdBy` (nombre de quien la unió).

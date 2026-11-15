@@ -33,7 +33,7 @@ Pendientes detectados en el análisis del proyecto (octubre 2026), escritos como
 | US-25 | Análisis de precios de productos | — | ✅ Hecho (rama `staging`) |
 | US-26 | Unir variantes de un mismo producto | 🟡 | ✅ Hecho (rama `staging`) |
 | US-27 | Guardar el código del producto al importar | 🟢 | ✅ Hecho (rama `staging`) |
-| US-28 | Devoluciones de producto en el análisis de precios | 🟢 | Pendiente |
+| US-28 | Devoluciones de producto en el análisis de precios | 🟢 | ✅ Hecho (rama `staging`) |
 | US-29 | Comparar un producto entre proveedores | 🟢 | Pendiente |
 | US-30 | Devoluciones en la página del proveedor | 🟢 | Pendiente |
 
@@ -327,6 +327,8 @@ Seguir el precio de lo que se compra a cada proveedor a partir de las líneas de
 - El precio de una compra devuelta sigue contando para la variación y la tendencia; la cantidad y el gasto del producto se muestran netos de lo devuelto.
 - En la lista de compras del producto, cada compra indica si fue devuelta y cuánto.
 - Las rebajas de precio (misma cantidad, precio menor) bajan el precio de esa compra.
+
+**Implementación:** `getReturns` relaciona las líneas de nota de crédito con su compra y `ProductReturnHelper` las clasifica (devolución si el precio coincide con margen de 0.1 %; rebaja si la cantidad coincide y el precio es menor). Sobre los datos actuales: 150 líneas ($9,475.42), 148 devoluciones y 2 rebajas; ninguna queda sin su compra. Detalle en [productos-api.md](./productos-api.md#cómo-se-arma-el-análisis).
 
 ### US-30 — Devoluciones en la página del proveedor 🟢
 **Como** administrador, **quiero** ver en la página de cada proveedor lo que le devolví, **para** saber cuánto y qué productos devuelvo más.

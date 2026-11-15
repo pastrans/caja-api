@@ -2,6 +2,7 @@ import { prisma } from '../../data/postgres';
 import {
   ProductPriceFilters,
   ProductPricePointRow,
+  ProductReturnRow,
   ProductVariantRow,
   PurchaseProductDatasource,
 } from '../../domain';
@@ -26,6 +27,8 @@ interface RawPricePointRow {
 }
 
 type ProductRef = { unitOfMeasure: number; ref: string };
+
+type RawReturnRow = { [key in keyof ProductReturnRow]: string | number };
 
 // El producto de cada línea (productRef / productName) se calcula al importar con ProductRefHelper.
 // Si el producto es una variante (ProductVariant), sus compras se cuentan como del producto principal.
@@ -102,6 +105,103 @@ export class PurchaseProductDatasourceImpl implements PurchaseProductDatasource 
       controlNumber: row.controlNumber,
       issueDate: row.issueDate,
       quantity: Number(row.quantity),
+      amount: Number(row.amount),
+      netAmount: Number(row.netAmount),
+    }));
+  }
+
+  // Cada línea de nota de crédito se relaciona con la compra que modifica por el código de generación de la línea
+  // (numeroDocumento) y el código del producto, sin mirar la unidad: Avícola devuelve con 99 o 59 lo facturado por libra.
+  // La merma no tiene código de un producto comprado, así que no se relaciona con ninguna compra
+  async getReturns(filters: ProductPriceFilters): Promise<ProductReturnRow[]> {
+    const { from, to, supplierId, products, resolveVariants } = filters;
+    const keys = products ? products.map((p) => ProductKeyHelper.localKey(p.unitOfMeasure, p.ref)) : null;
+
+    const rows = await prisma.$queryRaw<RawReturnRow[]>`
+      WITH purchases AS (
+        SELECT
+          d."supplierId" AS supplier_id,
+          d."id" AS document_id,
+          upper(d."generationCode") AS generation_code,
+          i."productRef" AS ref,
+          i."unitOfMeasure" AS unit,
+          sum(i."quantity") AS quantity,
+          sum(i."quantity" * i."unitPrice") / sum(i."quantity") AS list_price
+        FROM "PurchaseDocumentItem" i
+        JOIN "PurchaseDocument" d ON d."id" = i."documentId"
+        WHERE d."type" = 'CREDITO_FISCAL'
+          AND d."voidedAt" IS NULL
+          AND d."issueDate" BETWEEN ${from}::date AND ${to}::date
+          AND (${supplierId}::int IS NULL OR d."supplierId" = ${supplierId}::int)
+          AND i."productRef" IS NOT NULL
+          AND i."quantity" > 0
+          AND i."unitPrice" > ${MAX_BONUS_UNIT_PRICE}::numeric
+          AND i."taxedSale" + i."exemptSale" + i."nonSubjectSale" > 0
+          AND i."description" NOT ILIKE '(BONIFICACI%'
+        GROUP BY 1, 2, 3, 4, 5
+      ),
+      returns AS (
+        SELECT
+          d."supplierId" AS supplier_id,
+          d."id" AS document_id,
+          d."controlNumber" AS control_number,
+          d."issueDate" AS issue_date,
+          upper(btrim(i."relatedDocumentCode")) AS related_code,
+          i."productRef" AS ref,
+          i."quantity" AS quantity,
+          i."unitPrice" AS list_price,
+          i."taxedSale" + i."exemptSale" + i."nonSubjectSale" AS amount,
+          i."quantity" * i."unitPrice" - i."discount" AS net_amount
+        FROM "PurchaseDocumentItem" i
+        JOIN "PurchaseDocument" d ON d."id" = i."documentId"
+        WHERE d."type" = 'NOTA_CREDITO'
+          AND d."voidedAt" IS NULL
+          AND (${supplierId}::int IS NULL OR d."supplierId" = ${supplierId}::int)
+          AND i."productRef" IS NOT NULL
+          AND i."quantity" > 0
+      ),
+      matched AS (
+        SELECT
+          p.*,
+          r.document_id AS return_id, r.control_number, r.issue_date,
+          r.quantity AS return_quantity, r.list_price AS return_list_price, r.amount, r.net_amount,
+          CASE WHEN ${resolveVariants}::boolean THEN coalesce(v."targetUnitOfMeasure", p.unit) ELSE p.unit END AS product_unit,
+          CASE WHEN ${resolveVariants}::boolean THEN coalesce(v."targetRef", p.ref) ELSE p.ref END AS product_ref
+        FROM returns r
+        JOIN purchases p ON p.supplier_id = r.supplier_id AND p.generation_code = r.related_code AND p.ref = r.ref
+        LEFT JOIN "ProductVariant" v ON v."supplierId" = p.supplier_id AND v."unitOfMeasure" = p.unit AND v."ref" = p.ref
+      )
+      SELECT
+        m.supplier_id AS "supplierId",
+        m.product_unit AS "unitOfMeasure",
+        m.product_ref AS "ref",
+        m.document_id AS "purchaseDocumentId",
+        m.quantity::float8 AS "purchaseQuantity",
+        m.list_price::float8 AS "purchaseListPrice",
+        m.return_id AS "documentId",
+        m.control_number AS "controlNumber",
+        to_char(m.issue_date, 'YYYY-MM-DD') AS "issueDate",
+        m.return_quantity::float8 AS "quantity",
+        m.return_list_price::float8 AS "listPrice",
+        m.amount::float8 AS "amount",
+        m.net_amount::float8 AS "netAmount"
+      FROM matched m
+      WHERE (${keys}::text[] IS NULL OR (m.product_unit::text || ':' || m.product_ref) = ANY(${keys}::text[]))
+      ORDER BY m.issue_date, m.return_id
+    `;
+
+    return rows.map((row) => ({
+      supplierId: Number(row.supplierId),
+      unitOfMeasure: Number(row.unitOfMeasure),
+      ref: String(row.ref),
+      purchaseDocumentId: Number(row.purchaseDocumentId),
+      purchaseQuantity: Number(row.purchaseQuantity),
+      purchaseListPrice: Number(row.purchaseListPrice),
+      documentId: Number(row.documentId),
+      controlNumber: String(row.controlNumber),
+      issueDate: String(row.issueDate),
+      quantity: Number(row.quantity),
+      listPrice: Number(row.listPrice),
       amount: Number(row.amount),
       netAmount: Number(row.netAmount),
     }));

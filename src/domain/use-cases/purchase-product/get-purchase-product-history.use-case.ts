@@ -8,7 +8,7 @@ import {
   ProductPriceStats,
   ProductVariantInfo,
 } from '../../interfaces/purchase-product.interface';
-import { ProductKeyHelper, ProductPriceHelper } from '../../helpers/product-price.helper';
+import { ProductKeyHelper, ProductPriceHelper, ProductReturnHelper } from '../../helpers/product-price.helper';
 import { getProductSummaries } from './product-summaries';
 
 export interface PurchaseProductHistory {
@@ -38,13 +38,9 @@ export class GetPurchaseProductHistory implements GetPurchaseProductHistoryUseCa
       ? { unitOfMeasure: link.targetUnitOfMeasure, ref: link.targetRef }
       : { unitOfMeasure: dto.unitOfMeasure, ref: dto.ref };
 
-    const rows = await this.repository.getPricePoints({
-      from: dto.from,
-      to: dto.to,
-      supplierId: dto.supplierId,
-      products: [main],
-      resolveVariants: true,
-    });
+    const filters = { from: dto.from, to: dto.to, supplierId: dto.supplierId, products: [main], resolveVariants: true };
+    const [points, returns] = await Promise.all([this.repository.getPricePoints(filters), this.repository.getReturns(filters)]);
+    const rows = ProductReturnHelper.attach(points, returns);
 
     if (rows.length === 0) throw CustomError.notFound('No purchases of this product in the selected period');
 

@@ -13,7 +13,44 @@ export interface ProductPricePointRow {
   quantity: number;
   amount: number;    // Monto facturado de las líneas (con descuento, sin IVA): es lo que se gastó
   netAmount: number; // Cantidad × precio de lista − descuento, sin redondear: de aquí sale el precio unitario
+  // Notas de crédito sobre esta compra (ProductReturnHelper.attach)
+  returns?: ProductReturn[];
+  returnedQuantity?: number; // Devuelto al mismo precio (no cambia el precio, sí la cantidad y el gasto)
+  returnedAmount?: number;   // Monto de todas sus notas de crédito (devoluciones y rebajas)
+  priceAdjustment?: number;  // Rebajas de precio: se restan de netAmount para calcular el precio
 }
+
+// ---------- Devoluciones (líneas de nota de crédito sobre una compra) ----------
+
+export type ProductReturnType = 'return' | 'price'; // Devolución al mismo precio | rebaja de precio
+
+// Línea de nota de crédito con su compra (crédito fiscal), ya con el producto principal si es una variante
+export interface ProductReturnRow {
+  supplierId: number;
+  unitOfMeasure: number; // Unidad de la compra (la nota puede usar otra: Avícola devuelve con 99 lo facturado por libra)
+  ref: string;
+  purchaseDocumentId: number;
+  purchaseQuantity: number;
+  purchaseListPrice: number;
+  documentId: number; // Nota de crédito
+  controlNumber: string;
+  issueDate: string;
+  quantity: number;
+  listPrice: number;
+  amount: number;
+  netAmount: number;
+}
+
+export interface ProductReturn {
+  date: string;
+  documentId: number;
+  controlNumber: string;
+  type: ProductReturnType;
+  quantity: number;
+  amount: number;
+}
+
+export type ProductReturnStatus = 'none' | 'partial' | 'total';
 
 export type PriceTrendDirection = 'up' | 'down' | 'flat';
 
@@ -34,8 +71,11 @@ export interface ProductPriceStats {
   name: string;
   unitOfMeasure: number;
   purchases: number;
-  quantity: number;
-  spent: number;
+  quantity: number; // Neta: sin lo devuelto
+  spent: number;    // Neto: sin las notas de crédito sobre sus compras
+  returnedQuantity: number;
+  returnedAmount: number;
+  returns: number;  // Líneas de nota de crédito sobre sus compras
   avgPrice: number; // Promedio ponderado por cantidad
   minPrice: number;
   maxPrice: number;
@@ -54,16 +94,21 @@ export interface ProductPricePoint {
   date: string;
   documentId: number;
   controlNumber: string;
-  quantity: number;
-  amount: number;
-  unitPrice: number;
+  quantity: number; // Comprada (sin restar lo devuelto)
+  amount: number;   // Facturado
+  unitPrice: number; // Con las rebajas de precio aplicadas
+  returnStatus: ProductReturnStatus;
+  returnedQuantity: number;
+  returnedAmount: number;
+  returns: ProductReturn[];
 }
 
 export interface ProductPriceMonth {
   month: string; // YYYY-MM
   purchases: number;
-  quantity: number;
-  spent: number;
+  quantity: number; // Neta
+  spent: number;    // Neto
+  returnedAmount: number;
   avgPrice: number;
   minPrice: number;
   maxPrice: number;

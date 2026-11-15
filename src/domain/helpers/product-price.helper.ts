@@ -7,6 +7,9 @@ import {
   ProductPriceProjection,
   ProductPriceStats,
   ProductPriceTrend,
+  ProductReturnRow,
+  ProductReturnStatus,
+  ProductReturnType,
   ProductSummary,
 } from '../interfaces/purchase-product.interface';
 
@@ -20,6 +23,8 @@ const MIN_TREND_DAYS = 60;
 const FLAT_THRESHOLD_PCT = 0.5;
 
 const PROJECTION_MONTHS = 3;
+
+const QUANTITY_EPSILON = 0.0001;
 
 const round = (value: number, decimals: number) => {
   const factor = 10 ** decimals;
@@ -63,9 +68,19 @@ export class ProductNameHelper {
 }
 
 export class ProductPriceHelper {
-  // Precio pagado por unidad (con descuento, sin IVA). Sale del precio de lista y no del monto, que viene redondeado
-  static unitPrice(row: Pick<ProductPricePointRow, 'netAmount' | 'quantity'>): number {
-    return row.netAmount / row.quantity;
+  // Precio pagado por unidad (con descuento y rebajas, sin IVA). Sale del precio de lista y no del monto, que viene
+  // redondeado. Las devoluciones al mismo precio no lo cambian
+  static unitPrice(row: Pick<ProductPricePointRow, 'netAmount' | 'quantity' | 'priceAdjustment'>): number {
+    return (row.netAmount - (row.priceAdjustment ?? 0)) / row.quantity;
+  }
+
+  // Cantidad y gasto que quedaron después de las notas de crédito
+  static netQuantity(row: ProductPricePointRow): number {
+    return Math.max(row.quantity - (row.returnedQuantity ?? 0), 0);
+  }
+
+  static netSpent(row: ProductPricePointRow): number {
+    return Math.max(row.amount - (row.returnedAmount ?? 0), 0);
   }
 
   // Agrupa los puntos por producto, ordenados por fecha
@@ -90,9 +105,10 @@ export class ProductPriceHelper {
     const previous = rows.length > 1 ? rows[rows.length - 2]! : null;
     const prices = rows.map((row) => this.unitPrice(row));
 
-    const quantity = rows.reduce((sum, row) => sum + row.quantity, 0);
-    const spent = rows.reduce((sum, row) => sum + row.amount, 0);
-    const netAmount = rows.reduce((sum, row) => sum + row.netAmount, 0);
+    const purchasedQuantity = rows.reduce((sum, row) => sum + row.quantity, 0);
+    const quantity = rows.reduce((sum, row) => sum + this.netQuantity(row), 0);
+    const spent = rows.reduce((sum, row) => sum + this.netSpent(row), 0);
+    const paid = rows.reduce((sum, row) => sum + row.netAmount - (row.priceAdjustment ?? 0), 0);
     const firstPrice = prices[0]!;
     const lastPrice = prices[prices.length - 1]!;
     const previousPrice = previous ? this.unitPrice(previous) : null;
@@ -107,7 +123,10 @@ export class ProductPriceHelper {
       purchases: rows.length,
       quantity: round(quantity, 4),
       spent: round(spent, 2),
-      avgPrice: round(netAmount / quantity, 4), // Promedio ponderado por cantidad
+      returnedQuantity: round(rows.reduce((sum, row) => sum + (row.returnedQuantity ?? 0), 0), 4),
+      returnedAmount: round(rows.reduce((sum, row) => sum + (row.returnedAmount ?? 0), 0), 2),
+      returns: rows.reduce((sum, row) => sum + (row.returns?.length ?? 0), 0),
+      avgPrice: round(paid / purchasedQuantity, 4), // Promedio ponderado por la cantidad comprada
       minPrice: round(Math.min(...prices), 4),
       maxPrice: round(Math.max(...prices), 4),
       firstDate: first.issueDate,
@@ -197,14 +216,25 @@ export class ProductPriceHelper {
   }
 
   static points(rows: ProductPricePointRow[]): ProductPricePoint[] {
-    return rows.map((row) => ({
-      date: row.issueDate,
-      documentId: row.documentId,
-      controlNumber: row.controlNumber,
-      quantity: round(row.quantity, 4),
-      amount: round(row.amount, 2),
-      unitPrice: round(this.unitPrice(row), 4),
-    }));
+    return rows.map((row) => {
+      const returnedQuantity = row.returnedQuantity ?? 0;
+      let returnStatus: ProductReturnStatus = 'none';
+      if (returnedQuantity > 0) returnStatus = returnedQuantity >= row.quantity - QUANTITY_EPSILON ? 'total' : 'partial';
+      else if ((row.returns?.length ?? 0) > 0) returnStatus = 'partial'; // Solo rebajas de precio
+
+      return {
+        date: row.issueDate,
+        documentId: row.documentId,
+        controlNumber: row.controlNumber,
+        quantity: round(row.quantity, 4),
+        amount: round(row.amount, 2),
+        unitPrice: round(this.unitPrice(row), 4),
+        returnStatus,
+        returnedQuantity: round(returnedQuantity, 4),
+        returnedAmount: round(row.returnedAmount ?? 0, 2),
+        returns: row.returns ?? [],
+      };
+    });
   }
 
   static months(rows: ProductPricePointRow[]): ProductPriceMonth[] {
@@ -217,18 +247,71 @@ export class ProductPriceHelper {
     }
 
     return [...byMonth.entries()].map(([month, group]) => {
-      const quantity = group.reduce((sum, row) => sum + row.quantity, 0);
-      const spent = group.reduce((sum, row) => sum + row.amount, 0);
-      const netAmount = group.reduce((sum, row) => sum + row.netAmount, 0);
+      const purchasedQuantity = group.reduce((sum, row) => sum + row.quantity, 0);
+      const paid = group.reduce((sum, row) => sum + row.netAmount - (row.priceAdjustment ?? 0), 0);
       const prices = group.map((row) => this.unitPrice(row));
       return {
         month,
         purchases: group.length,
-        quantity: round(quantity, 4),
-        spent: round(spent, 2),
-        avgPrice: round(netAmount / quantity, 4), // Promedio ponderado por cantidad
+        quantity: round(group.reduce((sum, row) => sum + this.netQuantity(row), 0), 4),
+        spent: round(group.reduce((sum, row) => sum + this.netSpent(row), 0), 2),
+        returnedAmount: round(group.reduce((sum, row) => sum + (row.returnedAmount ?? 0), 0), 2),
+        avgPrice: round(paid / purchasedQuantity, 4), // Promedio ponderado por la cantidad comprada
         minPrice: round(Math.min(...prices), 4),
         maxPrice: round(Math.max(...prices), 4),
+      };
+    });
+  }
+}
+
+// Las notas de crédito sobre una compra: una devolución al mismo precio no cambia el precio por unidad (solo la
+// cantidad y el gasto); una rebaja (misma cantidad, precio menor) sí lo baja. Detalle en docs/productos-api.md
+export class ProductReturnHelper {
+  // Mismo precio con margen de redondeo: 0.1 % o $0.001
+  static type(row: ProductReturnRow): ProductReturnType {
+    const samePrice = Math.abs(row.listPrice - row.purchaseListPrice) <= Math.max(0.001, row.purchaseListPrice * 0.001);
+    const sameQuantity = Math.abs(row.quantity - row.purchaseQuantity) < QUANTITY_EPSILON;
+    return !samePrice && sameQuantity && row.listPrice < row.purchaseListPrice ? 'price' : 'return';
+  }
+
+  // Suma las notas de crédito a la compra (punto) que modifican; points y returns ya vienen con el producto principal
+  static attach(points: ProductPricePointRow[], returns: ProductReturnRow[]): ProductPricePointRow[] {
+    const byPurchase = new Map<string, ProductReturnRow[]>();
+    for (const row of returns) {
+      const key = `${ProductKeyHelper.build(row.supplierId, row.unitOfMeasure, row.ref)}|${row.purchaseDocumentId}`;
+      byPurchase.set(key, [...(byPurchase.get(key) ?? []), row]);
+    }
+
+    return points.map((point) => {
+      const rows = byPurchase.get(`${ProductKeyHelper.build(point.supplierId, point.unitOfMeasure, point.ref)}|${point.documentId}`);
+      if (!rows) return point;
+
+      let returnedQuantity = 0;
+      let returnedAmount = 0;
+      let priceAdjustment = 0;
+      const sorted = [...rows].sort((a, b) => a.issueDate.localeCompare(b.issueDate) || a.documentId - b.documentId);
+      const list = sorted.map((row) => {
+        const type = this.type(row);
+        if (type === 'price') priceAdjustment += row.netAmount;
+        else returnedQuantity += row.quantity;
+        returnedAmount += row.amount;
+        return {
+          date: row.issueDate,
+          documentId: row.documentId,
+          controlNumber: row.controlNumber,
+          type,
+          quantity: round(row.quantity, 4),
+          amount: round(row.amount, 2),
+        };
+      });
+
+      return {
+        ...point,
+        returns: list,
+        // Algunas notas devuelven más de lo comprado en esa línea: se limita a lo comprado
+        returnedQuantity: Math.min(returnedQuantity, point.quantity),
+        returnedAmount: Math.min(returnedAmount, point.amount),
+        priceAdjustment: Math.min(priceAdjustment, point.netAmount),
       };
     });
   }

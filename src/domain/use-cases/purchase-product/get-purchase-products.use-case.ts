@@ -3,7 +3,7 @@ import { PurchaseProductRepository } from '../../repositories';
 import { PaginatedResponse } from '../../interfaces/paginated-response.interface';
 import { ProductPriceStats, ProductsTrendSummary } from '../../interfaces/purchase-product.interface';
 import { PaginationHelper } from '../../helpers/pagination.helper';
-import { ProductKeyHelper, ProductPriceHelper } from '../../helpers/product-price.helper';
+import { ProductKeyHelper, ProductPriceHelper, ProductReturnHelper } from '../../helpers/product-price.helper';
 
 export interface PurchaseProductsResponse extends PaginatedResponse<ProductPriceStats> {
   months: number | null;
@@ -27,10 +27,13 @@ export class GetPurchaseProducts implements GetPurchaseProductsUseCase {
   ) {}
 
   async execute(dto: PurchaseProductsDto, paginationDto: PaginationDto): Promise<PurchaseProductsResponse> {
-    const [rows, variants] = await Promise.all([
-      this.repository.getPricePoints({ from: dto.from, to: dto.to, supplierId: dto.supplierId, products: null, resolveVariants: true }),
+    const filters = { from: dto.from, to: dto.to, supplierId: dto.supplierId, products: null, resolveVariants: true };
+    const [points, returns, variants] = await Promise.all([
+      this.repository.getPricePoints(filters),
+      this.repository.getReturns(filters),
       this.repository.getVariants(dto.supplierId),
     ]);
+    const rows = ProductReturnHelper.attach(points, returns);
 
     // Cuántas variantes tiene unidas cada producto principal
     const variantCount = new Map<string, number>();
