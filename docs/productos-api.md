@@ -95,6 +95,33 @@ Historial de precios de un producto. Acepta `months` (por defecto `12`). `404` s
 - Si `key` es una variante, responde con su producto principal (`product.key` es la del principal).
 - `variants`: variantes unidas al producto, cada una con su historial propio completo (no solo el del periodo): `key`, `ref`, `name`, `unitOfMeasure`, `purchases`, `firstDate`, `lastDate`, `lastPrice`, `createdAt` y `createdBy` (nombre de quien la unió).
 
+## `GET /api/v1/purchase-products/returns`
+
+Devoluciones de productos de un periodo, **por la fecha de la nota de crédito** (para la página del proveedor). Mismos parámetros que los reportes de compras: `from` y `to` (sin fechas, el mes en curso; la respuesta trae el rango aplicado) y `supplierId` opcional. Usa la misma relación entre nota de crédito y compra que el análisis de precios, así que la merma no cuenta.
+
+```json
+{
+  "from": "2025-11-01", "to": "2026-10-31", "supplierId": 3,
+  "summary": { "amount": 164.88, "returns": 4, "priceReductions": 0, "creditNotes": 4, "products": 3,
+               "purchasedAmount": 127191.74, "percentage": 0.13 },
+  "products": [
+    { "key": "3:36:030202007", "name": "PECHUGA TAMBOR CON PIEL", "ref": "030202007", "unitOfMeasure": 36,
+      "returns": 2, "purchases": 2, "quantity": 38.61, "amount": 66.63, "percentage": 40.41 }
+  ],
+  "items": [
+    { "date": "2026-09-11", "documentId": 186, "controlNumber": "DTE-05-M001P001-000000000015036",
+      "purchaseDocumentId": 141, "purchaseControlNumber": "DTE-03-M001P001-000000000036676", "purchaseDate": "2026-09-11",
+      "productKey": "3:36:030202007", "productName": "PECHUGA TAMBOR CON PIEL", "unitOfMeasure": 36,
+      "type": "return", "quantity": 23.01, "amount": 39.71 }
+  ]
+}
+```
+
+- `summary.amount`: devoluciones y rebajas de producto, sin IVA. `purchasedAmount`: lo comprado en el periodo (líneas de créditos fiscales activos, sin IVA); `percentage` = `amount / purchasedAmount`.
+- `products`: de mayor a menor monto devuelto, con el producto principal si es una variante. `percentage` es sobre el monto devuelto del periodo.
+- `items`: de la más reciente a la más antigua. `documentId` es la nota de crédito y `purchaseDocumentId` la factura original. En las rebajas (`type: "price"`) `quantity` es 0.
+- En todo el historial actual: 150 líneas, $9,475.42, el 1.3 % de lo comprado.
+
 ## Variantes: unir el mismo producto con otro nombre o código
 
 Cuando un proveedor cambia el nombre o el código de un producto, el análisis lo ve como dos productos y su historial queda partido. Una variante se une a un producto principal **del mismo proveedor**: desde ese momento sus compras se cuentan como del principal en el listado, el historial y la tendencia. No se modifican los documentos y se puede deshacer.

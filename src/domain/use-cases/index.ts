@@ -57,3 +57,4 @@ export * from './purchase-product/unmerge-product.use-case';
 export * from './purchase-product/get-product-merges.use-case';
 export * from './purchase-product/get-product-merge-suggestions.use-case';
 export * from './purchase-product/dismiss-product-suggestion.use-case';
+export * from './purchase-product/get-product-returns.use-case';

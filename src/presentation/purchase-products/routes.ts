@@ -23,6 +23,7 @@ export class PurchaseProductRoutes {
     // El historial usa ?key= porque el código del producto puede traer espacios, '/' o ':'
     router.get('/', requireAdmin, controller.getProducts);
     router.get('/history', requireAdmin, controller.getHistory);
+    router.get('/returns', requireAdmin, controller.getReturns); // Devoluciones del periodo (US-30)
 
     // Variantes: el mismo producto con otro código o nombre (US-26)
     router.get('/suggestions', requireAdmin, controller.getSuggestions);

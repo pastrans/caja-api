@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { prisma } from '../../data/postgres';
 import {
   ProductPriceFilters,
@@ -5,6 +6,7 @@ import {
   ProductReturnRow,
   ProductVariantRow,
   PurchaseProductDatasource,
+  ReturnDateFilter,
 } from '../../domain';
 import { ProductKeyHelper } from '../../domain/helpers/product-price.helper';
 
@@ -113,9 +115,13 @@ export class PurchaseProductDatasourceImpl implements PurchaseProductDatasource 
   // Cada línea de nota de crédito se relaciona con la compra que modifica por el código de generación de la línea
   // (numeroDocumento) y el código del producto, sin mirar la unidad: Avícola devuelve con 99 o 59 lo facturado por libra.
   // La merma no tiene código de un producto comprado, así que no se relaciona con ninguna compra
-  async getReturns(filters: ProductPriceFilters): Promise<ProductReturnRow[]> {
+  // dateOf 'purchase': las notas de las compras del periodo (análisis de precios); 'return': las notas del periodo
+  async getReturns(filters: ProductPriceFilters, dateOf: ReturnDateFilter = 'purchase'): Promise<ProductReturnRow[]> {
     const { from, to, supplierId, products, resolveVariants } = filters;
     const keys = products ? products.map((p) => ProductKeyHelper.localKey(p.unitOfMeasure, p.ref)) : null;
+    const inPeriod = Prisma.sql`AND d."issueDate" BETWEEN ${from}::date AND ${to}::date`;
+    const purchasePeriod = dateOf === 'purchase' ? inPeriod : Prisma.empty;
+    const returnPeriod = dateOf === 'return' ? inPeriod : Prisma.empty;
 
     const rows = await prisma.$queryRaw<RawReturnRow[]>`
       WITH purchases AS (
@@ -123,22 +129,25 @@ export class PurchaseProductDatasourceImpl implements PurchaseProductDatasource 
           d."supplierId" AS supplier_id,
           d."id" AS document_id,
           upper(d."generationCode") AS generation_code,
+          d."controlNumber" AS purchase_control_number,
+          d."issueDate" AS purchase_date,
           i."productRef" AS ref,
           i."unitOfMeasure" AS unit,
+          max(i."productName") AS purchase_name,
           sum(i."quantity") AS quantity,
           sum(i."quantity" * i."unitPrice") / sum(i."quantity") AS list_price
         FROM "PurchaseDocumentItem" i
         JOIN "PurchaseDocument" d ON d."id" = i."documentId"
         WHERE d."type" = 'CREDITO_FISCAL'
           AND d."voidedAt" IS NULL
-          AND d."issueDate" BETWEEN ${from}::date AND ${to}::date
+          ${purchasePeriod}
           AND (${supplierId}::int IS NULL OR d."supplierId" = ${supplierId}::int)
           AND i."productRef" IS NOT NULL
           AND i."quantity" > 0
           AND i."unitPrice" > ${MAX_BONUS_UNIT_PRICE}::numeric
           AND i."taxedSale" + i."exemptSale" + i."nonSubjectSale" > 0
           AND i."description" NOT ILIKE '(BONIFICACI%'
-        GROUP BY 1, 2, 3, 4, 5
+        GROUP BY 1, 2, 3, 4, 5, 6, 7
       ),
       returns AS (
         SELECT
@@ -156,6 +165,7 @@ export class PurchaseProductDatasourceImpl implements PurchaseProductDatasource 
         JOIN "PurchaseDocument" d ON d."id" = i."documentId"
         WHERE d."type" = 'NOTA_CREDITO'
           AND d."voidedAt" IS NULL
+          ${returnPeriod}
           AND (${supplierId}::int IS NULL OR d."supplierId" = ${supplierId}::int)
           AND i."productRef" IS NOT NULL
           AND i."quantity" > 0
@@ -184,7 +194,10 @@ export class PurchaseProductDatasourceImpl implements PurchaseProductDatasource 
         m.return_quantity::float8 AS "quantity",
         m.return_list_price::float8 AS "listPrice",
         m.amount::float8 AS "amount",
-        m.net_amount::float8 AS "netAmount"
+        m.net_amount::float8 AS "netAmount",
+        m.purchase_control_number AS "purchaseControlNumber",
+        to_char(m.purchase_date, 'YYYY-MM-DD') AS "purchaseDate",
+        m.purchase_name AS "name"
       FROM matched m
       WHERE (${keys}::text[] IS NULL OR (m.product_unit::text || ':' || m.product_ref) = ANY(${keys}::text[]))
       ORDER BY m.issue_date, m.return_id
@@ -204,7 +217,23 @@ export class PurchaseProductDatasourceImpl implements PurchaseProductDatasource 
       listPrice: Number(row.listPrice),
       amount: Number(row.amount),
       netAmount: Number(row.netAmount),
+      purchaseControlNumber: String(row.purchaseControlNumber),
+      purchaseDate: String(row.purchaseDate),
+      name: String(row.name),
     }));
+  }
+
+  async getPurchasedAmount(from: string, to: string, supplierId: number | null): Promise<number> {
+    const [row] = await prisma.$queryRaw<{ amount: number | null }[]>`
+      SELECT sum(i."taxedSale" + i."exemptSale" + i."nonSubjectSale")::float8 AS "amount"
+      FROM "PurchaseDocumentItem" i
+      JOIN "PurchaseDocument" d ON d."id" = i."documentId"
+      WHERE d."type" = 'CREDITO_FISCAL'
+        AND d."voidedAt" IS NULL
+        AND d."issueDate" BETWEEN ${from}::date AND ${to}::date
+        AND (${supplierId}::int IS NULL OR d."supplierId" = ${supplierId}::int)
+    `;
+    return Number(row?.amount ?? 0);
   }
 
   async getVariants(supplierId: number | null): Promise<ProductVariantRow[]> {

@@ -3,6 +3,7 @@ import {
   ProductPricePointRow,
   ProductRef,
   ProductReturnRow,
+  ReturnDateFilter,
   ProductVariantRow,
   PurchaseProductDatasource,
   PurchaseProductRepository,
@@ -15,8 +16,12 @@ export class PurchaseProductRepositoryImpl implements PurchaseProductRepository 
     return this.datasource.getPricePoints(filters);
   }
 
-  getReturns(filters: ProductPriceFilters): Promise<ProductReturnRow[]> {
-    return this.datasource.getReturns(filters);
+  getReturns(filters: ProductPriceFilters, dateOf?: ReturnDateFilter): Promise<ProductReturnRow[]> {
+    return this.datasource.getReturns(filters, dateOf);
+  }
+
+  getPurchasedAmount(from: string, to: string, supplierId: number | null): Promise<number> {
+    return this.datasource.getPurchasedAmount(from, to, supplierId);
   }
 
   getVariants(supplierId: number | null): Promise<ProductVariantRow[]> {

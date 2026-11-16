@@ -39,6 +39,10 @@ export interface ProductReturnRow {
   listPrice: number;
   amount: number;
   netAmount: number;
+  // Datos de la compra para listar devoluciones
+  purchaseControlNumber: string;
+  purchaseDate: string;
+  name: string;
 }
 
 export interface ProductReturn {
@@ -51,6 +55,45 @@ export interface ProductReturn {
 }
 
 export type ProductReturnStatus = 'none' | 'partial' | 'total';
+
+// ---------- Devoluciones de un periodo (página del proveedor) ----------
+
+export interface ProductReturnItem {
+  date: string; // Fecha de la nota de crédito
+  documentId: number;
+  controlNumber: string;
+  purchaseDocumentId: number;
+  purchaseControlNumber: string;
+  purchaseDate: string;
+  productKey: string; // Producto principal (para el análisis de precios)
+  productName: string;
+  unitOfMeasure: number;
+  type: ProductReturnType;
+  quantity: number; // 0 en las rebajas de precio
+  amount: number;
+}
+
+export interface ReturnedProduct {
+  key: string;
+  name: string;
+  ref: string;
+  unitOfMeasure: number;
+  returns: number;    // Líneas de nota de crédito
+  purchases: number;  // Compras afectadas
+  quantity: number;   // Devuelta (sin rebajas)
+  amount: number;
+  percentage: number; // Del monto devuelto del periodo
+}
+
+export interface ProductReturnsSummary {
+  amount: number;          // Devoluciones y rebajas de producto (sin merma)
+  returns: number;         // Líneas de devolución
+  priceReductions: number; // Líneas de rebaja de precio
+  creditNotes: number;     // Notas de crédito distintas
+  products: number;        // Productos con devoluciones
+  purchasedAmount: number; // Comprado en el periodo (líneas de créditos fiscales activos, sin IVA)
+  percentage: number;      // amount / purchasedAmount
+}
 
 export type PriceTrendDirection = 'up' | 'down' | 'flat';
 

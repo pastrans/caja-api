@@ -35,7 +35,7 @@ Pendientes detectados en el análisis del proyecto (octubre 2026), escritos como
 | US-27 | Guardar el código del producto al importar | 🟢 | ✅ Hecho (rama `staging`) |
 | US-28 | Devoluciones de producto en el análisis de precios | 🟢 | ✅ Hecho (rama `staging`) |
 | US-29 | Comparar un producto entre proveedores | 🟢 | ⛔ Descartada |
-| US-30 | Devoluciones en la página del proveedor | 🟢 | Pendiente |
+| US-30 | Devoluciones en la página del proveedor | 🟢 | ✅ Hecho (rama `staging`) |
 
 ---
 
@@ -338,6 +338,8 @@ Seguir el precio de lo que se compra a cada proveedor a partir de las líneas de
 - Lista de devoluciones: fecha, producto, cantidad, monto, y enlaces a la nota de crédito y a la factura original.
 - Productos más devueltos, por monto, con enlace al análisis de precios de cada uno.
 - Los descuentos por merma no se cuentan como devoluciones de producto.
+
+**Implementación:** `GET /purchase-products/returns?supplierId=&from=&to=` (por la fecha de la nota de crédito, con la misma relación nota-compra de US-28). En el frontend, sección "Devoluciones del periodo" en la página del proveedor, con el mismo selector de fechas que "Compras del periodo". Detalle en [productos-api.md](./productos-api.md#get-apiv1purchase-productsreturns).
 
 ### US-29 — Comparar un producto entre proveedores 🟢 ⛔ Descartada
 > **Descartada por ahora (16/11/2026):** solo aporta donde varios proveedores venden lo mismo (partes de pollo entre Avícola Campestre, Avícola Salvadoreña y Sello de Oro) y exige mantener a mano un catálogo propio con unos 320 productos y presentaciones distintas. Se puede retomar si cambia esa necesidad.

@@ -5,6 +5,7 @@ import {
   DismissProductSuggestionDto,
   GetProductMergeSuggestions,
   GetProductMerges,
+  GetProductReturns,
   GetPurchaseProductHistory,
   GetPurchaseProducts,
   MergeProducts,
@@ -14,6 +15,7 @@ import {
   PurchaseProductHistoryDto,
   PurchaseProductRepository,
   PurchaseProductsDto,
+  PurchaseReportDto,
   UnmergeProduct,
   UnmergeProductDto,
 } from '../../domain';
@@ -44,6 +46,17 @@ export class PurchaseProductsController {
     new GetPurchaseProductHistory(this.purchaseProductRepository)
       .execute(historyDto!)
       .then((history) => res.json(history))
+      .catch(next);
+  };
+
+  // Rango como en los reportes de compras: sin fechas, el mes en curso
+  public getReturns = (req: Request, res: Response, next: NextFunction) => {
+    const [error, reportDto] = PurchaseReportDto.create(req.query, this.timezone);
+    if (error) return next(CustomError.badRequest(error));
+
+    new GetProductReturns(this.purchaseProductRepository)
+      .execute(reportDto!)
+      .then((report) => res.json(report))
       .catch(next);
   };
 
