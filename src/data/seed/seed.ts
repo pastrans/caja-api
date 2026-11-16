@@ -38,6 +38,10 @@ async function main() {
   await prisma.closing.deleteMany();
   await prisma.opening.deleteMany();
   await prisma.cashRegisterRecord.deleteMany();
+  await prisma.creditNoteRelation.deleteMany();
+  await prisma.purchaseDocumentItem.deleteMany();
+  await prisma.purchaseDocument.deleteMany();
+  await prisma.supplier.deleteMany();
   await prisma.user.deleteMany();
   await prisma.employee.deleteMany();
 

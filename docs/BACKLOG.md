@@ -24,6 +24,18 @@ Pendientes detectados en el análisis del proyecto (octubre 2026), escritos como
 | US-16 | Tests automatizados y linter | 🟢 | Pendiente |
 | US-17 | Despliegue con Docker y scripts de producción | 🟢 | Pendiente |
 | US-18 | Dashboard de ventas | — | ✅ Hecho (rama `staging`) |
+| US-19 | Catálogo de proveedores | — | ✅ Hecho (rama `staging`) |
+| US-20 | Importación masiva de DTE de compras | — | ✅ Hecho (rama `staging`) |
+| US-21 | Vincular notas de crédito con su crédito fiscal | — | ✅ Hecho (rama `staging`) |
+| US-22 | Consultar documentos de compra | — | ✅ Hecho (rama `staging`) |
+| US-23 | Anular y reactivar documentos de compra | — | ✅ Hecho (rama `staging`) |
+| US-24 | Reportes de compras e IVA | — | ✅ Hecho (rama `staging`) |
+| US-25 | Análisis de precios de productos | — | ✅ Hecho (rama `staging`) |
+| US-26 | Unir variantes de un mismo producto | 🟡 | ✅ Hecho (rama `staging`) |
+| US-27 | Guardar el código del producto al importar | 🟢 | ✅ Hecho (rama `staging`) |
+| US-28 | Devoluciones de producto en el análisis de precios | 🟢 | ✅ Hecho (rama `staging`) |
+| US-29 | Comparar un producto entre proveedores | 🟢 | ⛔ Descartada |
+| US-30 | Devoluciones en la página del proveedor | 🟢 | ✅ Hecho (rama `staging`) |
 
 ---
 
@@ -184,6 +196,159 @@ Hoy `OpenCashRegister` hace `findActive()` y luego `open()` sin transacción, y 
 - `npm start` solo ejecuta `node dist/app.js`; la compilación queda en `npm run build`.
 - `npm run dev` no ejecuta `prisma migrate dev` en cada arranque.
 - Hay un `Dockerfile` multi-stage para la API.
+
+---
+
+## 📥 Registro de compras (DTE)
+
+Registrar los Documentos Tributarios Electrónicos de compra (créditos fiscales y notas de crédito) a partir de su JSON, para controlar compras e IVA. Diseño técnico, reglas de lectura del JSON y modelo de datos: [compras-dte.md](./compras-dte.md). Referencia de endpoints: [compras-api.md](./compras-api.md).
+
+Todas las historias son solo para `ADMIN`. El frontend vive en otro repositorio; cada historia necesita su pantalla allí.
+
+### US-19 — Catálogo de proveedores
+**Como** administrador, **quiero** que los proveedores se registren solos a partir de los documentos que importo, **para** no tener que darlos de alta a mano y poder ver las compras por proveedor.
+
+**Criterios de aceptación**
+- Al importar un DTE, el emisor se busca por NIT; si no existe se crea con NIT, NRC, nombre, nombre comercial, actividad económica, teléfono y correo.
+- Si ya existe, sus datos se actualizan con los del documento más reciente (por fecha de emisión).
+- `GET /api/v1/suppliers`: listado paginado con búsqueda por nombre o NIT.
+- `GET /api/v1/suppliers/:id`: detalle del proveedor.
+- Los proveedores no se crean, editan ni borran manualmente.
+
+### US-20 — Importación masiva de DTE de compras
+**Como** administrador, **quiero** subir varios archivos JSON de facturas a la vez, **para** registrar mis compras sin capturarlas a mano.
+
+**Criterios de aceptación**
+- `POST /api/v1/purchase-documents/import` recibe archivos `.json` (multipart). Máximo 100 archivos por carga y 1 MB por archivo; si se exceden, la carga completa responde `400`.
+- Solo se acepta el JSON; el PDF no se sube ni se guardan archivos en disco.
+- Lee archivos en UTF-8 y en Latin-1 (varios proveedores envían Latin-1).
+- Se aceptan solo créditos fiscales (`tipoDte = 03`) y notas de crédito (`tipoDte = 05`).
+- Un archivo se **rechaza** si:
+  - no es un JSON válido o no tiene la estructura de un DTE;
+  - su tipo no es `03` ni `05`;
+  - es del ambiente de pruebas (`ambiente ≠ 01`);
+  - no tiene sello de recepción (se busca en `selloRecibido` y en `respuestaHacienda.selloRecibido`);
+  - el NRC del receptor no está en `RECEIVER_NRCS`;
+  - su código de generación ya está registrado o se repite dentro de la misma carga.
+- Un archivo se importa **con advertencia** si:
+  - Hacienda lo recibió con observaciones (se guardan las observaciones);
+  - sus totales no cuadran (IVA ≠ 13 % del gravado, o suma de líneas ≠ total gravado, con tolerancia de $0.01).
+- La carga es parcial: los archivos válidos se importan aunque otros fallen. La respuesta trae el resultado por archivo (`imported`, `rejected` con motivo, `warnings`) y un conteo total.
+- Se guardan encabezado, totales, líneas de detalle y el JSON original completo.
+- Cada documento queda asociado al usuario que lo importó.
+
+### US-21 — Vincular notas de crédito con su crédito fiscal
+**Como** administrador, **quiero** que cada nota de crédito quede ligada al crédito fiscal que modifica, **para** conocer el monto neto real de cada compra.
+
+**Criterios de aceptación**
+- Al importar una nota de crédito, cada `documentoRelacionado` electrónico (`tipoGeneracion = 2`) se vincula con el crédito fiscal que tenga ese código de generación.
+- Si el crédito fiscal aún no está registrado, la relación queda **pendiente de vincular** y la respuesta de la carga lo advierte.
+- Al importar después ese crédito fiscal, las notas pendientes se vinculan solas, también si ambos vienen en la misma carga y en cualquier orden.
+- Las relaciones con documentos físicos (`tipoGeneracion = 1`) se guardan pero no se intentan vincular.
+- `GET /api/v1/purchase-documents?pendingLink=true` lista las notas de crédito pendientes de vincular.
+- El aviso es solo en la aplicación; no se envía correo.
+
+### US-22 — Consultar documentos de compra
+**Como** administrador, **quiero** buscar y ver el detalle de mis documentos de compra, **para** revisar lo que he importado.
+
+**Criterios de aceptación**
+- `GET /api/v1/purchase-documents`: listado paginado, ordenado por fecha de emisión descendente, con filtros por tipo, proveedor, rango de fechas, NRC receptor, estado (activo / anulado), con advertencias y pendientes de vincular.
+- `GET /api/v1/purchase-documents/:id`: encabezado, totales, líneas, proveedor, documentos relacionados (en ambos sentidos), advertencias y datos de anulación.
+- Los documentos no se pueden editar.
+
+### US-23 — Anular y reactivar documentos de compra
+**Como** administrador, **quiero** anular un documento importado, **para** sacarlo de los reportes cuando no corresponde, y poder revertirlo si me equivoco.
+
+**Criterios de aceptación**
+- `PATCH /api/v1/purchase-documents/:id/void` con `reason` obligatorio; guarda motivo, fecha y usuario.
+- `PATCH /api/v1/purchase-documents/:id/unvoid` reactiva el documento y limpia los datos de anulación.
+- Anular un documento ya anulado, o reactivar uno activo, responde `400`.
+- Los documentos anulados no cuentan en ningún reporte.
+- Anular un crédito fiscal con notas de crédito vinculadas lo permite, pero la respuesta lo advierte.
+- Anular en el sistema no anula nada en Hacienda; eso solo lo hace el emisor.
+
+### US-24 — Reportes de compras e IVA
+**Como** administrador, **quiero** ver el IVA de mis compras y cuánto le compro a cada proveedor, **para** controlar mi crédito fiscal y mis gastos.
+
+**Criterios de aceptación**
+- Cada documento cuenta en el mes de su fecha de emisión.
+- Las notas de crédito restan; los documentos anulados no cuentan. Las notas pendientes de vincular sí cuentan.
+- `GET /api/v1/purchase-reports/iva-summary?year=`: por mes, compras gravadas, IVA crédito fiscal (13 %), IVA percibido (1 %), notas de crédito y neto.
+- `GET /api/v1/purchase-reports/summary?from=&to=`: total de compras, IVA, percepción y número de documentos en el rango.
+- `GET /api/v1/purchase-reports/by-supplier?from=&to=`: totales por proveedor con porcentaje del total.
+- Todos los reportes aceptan filtro por NRC receptor.
+
+---
+
+## 📈 Análisis de precios de productos
+
+Seguir el precio de lo que se compra a cada proveedor a partir de las líneas de los créditos fiscales. Reglas de cálculo, endpoints y hallazgos en los datos: [productos-api.md](./productos-api.md).
+
+### US-25 — Análisis de precios de productos
+**Como** administrador, **quiero** ver cómo cambia el precio de cada producto que compro, **para** saber cuánto han subido y hacia dónde van.
+
+**Criterios de aceptación**
+- `GET /api/v1/purchase-products`: productos del periodo (`months` = últimos N meses o `all`) con último precio, variación del periodo, tendencia mensual con su R² y gasto. Búsqueda sin acentos, filtro por proveedor, orden y paginación.
+- `GET /api/v1/purchase-products/history?key=`: compras una por una, resumen por mes y proyección a 3 meses si hay tendencia.
+- Solo cuentan los créditos fiscales activos. Se excluyen las notas de crédito y las bonificaciones (rotuladas, de monto 0 o de $0.01 o menos).
+- El precio es el de lista menos el descuento, sin IVA.
+- La tendencia no se calcula con menos de 4 compras o menos de 60 días.
+
+### US-26 — Unir variantes de un mismo producto 🟡
+**Como** administrador, **quiero** indicar que dos nombres o códigos de un proveedor son el mismo producto, **para** que su historial de precios no quede partido cuando el proveedor cambia la redacción.
+
+**Contexto:** Hernández Hermanos no manda código y renombró sus productos en mayo 2025 (`CHORIZO BARBACOA 454 g` → `CHORIZO BARBACOA 454 g 8U`, mismo precio): aparece con 47 productos que son unos 20 reales. San Valentín usa el mismo código con dos unidades de medida. Detalle en [productos-api.md](./productos-api.md#pendientes).
+
+**Criterios de aceptación**
+- Se pueden asignar una o más variantes (código o nombre + unidad de medida) a un producto principal del mismo proveedor, y deshacer la asignación.
+- El listado y el historial muestran el producto principal con las compras de todas sus variantes.
+- Opcional: sugerir variantes probables (mismo proveedor, nombre parecido, mismo precio en fechas que no se traslapan) para confirmarlas con un clic.
+
+**Implementación:** tabla `ProductVariant` (variante → principal, sin cadenas) y `ProductSuggestionDismissal` (sugerencias descartadas). Endpoints `GET /purchase-products/suggestions`, `POST /purchase-products/suggestions/dismiss`, `GET|POST|DELETE /purchase-products/merges`. Las sugerencias agrupan por nombre normalizado y no mezclan unidades con precios distintos (Avícola facturó por bolsa lo que factura por libra). Detalle en [productos-api.md](./productos-api.md#variantes-unir-el-mismo-producto-con-otro-nombre-o-código).
+
+### US-27 — Guardar el código del producto al importar 🟢
+**Como** administrador, **quiero** que el código y el nombre del producto se extraigan al importar el DTE, **para** enterarme si un proveedor cambia el formato en lugar de que sus productos se partan sin aviso.
+
+**Criterios de aceptación**
+- Cada línea guarda el código y el nombre de producto calculados con las reglas de [productos-api.md](./productos-api.md#cómo-se-arma-el-análisis) (migración que los calcula para las líneas existentes).
+- La importación advierte cuando una línea de Avícola Salvadoreña no tiene el formato `código|...`.
+- El análisis de precios usa los campos guardados en lugar de calcularlos en cada consulta.
+
+**Implementación:** columnas `productRef` y `productName` en `PurchaseDocumentItem`, calculadas por `ProductRefHelper` al importar y por la migración `20261115000000_add_item_product_ref` para las líneas existentes (idénticas al cálculo anterior en las 20,309 líneas). La importación responde con `PRODUCT_FORMAT_CHANGED` (un proveedor que siempre manda el código en la descripción deja de hacerlo) y `PRODUCT_UNIT_CHANGED` (un producto llega en una unidad que fue menos del 10 % de sus compras anteriores); no se guardan en el documento.
+
+### US-28 — Devoluciones de producto en el análisis de precios 🟢
+**Como** administrador, **quiero** ver qué compras de un producto fueron devueltas, **para** que la cantidad y el gasto reflejen lo que realmente me quedé.
+
+**Contexto (revisión de las notas de crédito, 15/11/2026):** las líneas de nota de crédito con código de producto casi siempre son **devoluciones al mismo precio**, no rebajas: 101 devoluciones totales ($7,641) y 25 parciales ($1,515), contra 6 rebajas de precio ($103). Una devolución al mismo precio no cambia el precio por unidad, solo la cantidad y el gasto. Las de Avícola Salvadoreña usan otra unidad (99 o 59) para devolver lo facturado por libra, así que se relacionan por código, cantidad y precio, no por unidad. El `DESCUENTO POR MERMA` ($16,783, Avícola Campestre) es por factura y **queda fuera del precio** (decisión del 15/11/2026).
+
+**Criterios de aceptación**
+- Cada línea de nota de crédito con código de producto se relaciona con la compra (crédito fiscal) que modifica.
+- En la gráfica de precios, la compra devuelta se marca (total o parcial) y aparece además un punto de devolución en la fecha de la nota de crédito, con la cantidad devuelta.
+- El precio de una compra devuelta sigue contando para la variación y la tendencia; la cantidad y el gasto del producto se muestran netos de lo devuelto.
+- En la lista de compras del producto, cada compra indica si fue devuelta y cuánto.
+- Las rebajas de precio (misma cantidad, precio menor) bajan el precio de esa compra.
+
+**Implementación:** `getReturns` relaciona las líneas de nota de crédito con su compra y `ProductReturnHelper` las clasifica (devolución si el precio coincide con margen de 0.1 %; rebaja si la cantidad coincide y el precio es menor). Sobre los datos actuales: 150 líneas ($9,475.42), 148 devoluciones y 2 rebajas; ninguna queda sin su compra. Detalle en [productos-api.md](./productos-api.md#cómo-se-arma-el-análisis).
+
+### US-30 — Devoluciones en la página del proveedor 🟢
+**Como** administrador, **quiero** ver en la página de cada proveedor lo que le devolví, **para** saber cuánto y qué productos devuelvo más.
+
+**Criterios de aceptación**
+- Resumen del periodo (mismo selector de fechas de la página): monto devuelto, número de devoluciones y % sobre lo comprado.
+- Lista de devoluciones: fecha, producto, cantidad, monto, y enlaces a la nota de crédito y a la factura original.
+- Productos más devueltos, por monto, con enlace al análisis de precios de cada uno.
+- Los descuentos por merma no se cuentan como devoluciones de producto.
+
+**Implementación:** `GET /purchase-products/returns?supplierId=&from=&to=` (por la fecha de la nota de crédito, con la misma relación nota-compra de US-28). En el frontend, sección "Devoluciones del periodo" en la página del proveedor, con el mismo selector de fechas que "Compras del periodo". Detalle en [productos-api.md](./productos-api.md#get-apiv1purchase-productsreturns).
+
+### US-29 — Comparar un producto entre proveedores 🟢 ⛔ Descartada
+> **Descartada por ahora (16/11/2026):** solo aporta donde varios proveedores venden lo mismo (partes de pollo entre Avícola Campestre, Avícola Salvadoreña y Sello de Oro) y exige mantener a mano un catálogo propio con unos 320 productos y presentaciones distintas. Se puede retomar si cambia esa necesidad.
+
+**Como** administrador, **quiero** agrupar productos equivalentes de distintos proveedores, **para** comparar quién me vende más barato.
+
+**Criterios de aceptación**
+- Existe un catálogo propio de productos al que se asignan los productos de cada proveedor.
+- Para un producto del catálogo se ve el precio de cada proveedor en el tiempo, en la misma unidad de medida.
 
 ---
 

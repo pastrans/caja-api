@@ -1,0 +1,446 @@
+{
+  "info": {
+    "name": "caja-api - Compras (DTE)",
+    "description": "Endpoints de compras a partir de DTE (créditos fiscales y notas de crédito).\n\nVariables (en tu environment): `URL` = base de la API sin `/api/v1` (ej. `http://localhost:3001`) y `token` = JWT de un usuario ADMIN.\n\nReferencia completa: docs/compras-api.md",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Proveedores",
+      "item": [
+        {
+          "name": "Listar proveedores",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/api/v1/suppliers?page=1&limit=10",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "suppliers"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Página",
+                  "disabled": false
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Elementos por página (máx. 100)",
+                  "disabled": false
+                },
+                {
+                  "key": "search",
+                  "value": "avicola",
+                  "description": "Nombre, nombre comercial o NIT",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Listado paginado, ordenado por nombre. `search` busca en nombre, nombre comercial o NIT."
+          },
+          "response": []
+        },
+        {
+          "name": "Obtener proveedor",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/api/v1/suppliers/:id",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "suppliers",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1",
+                  "description": "Id del proveedor"
+                }
+              ]
+            },
+            "description": "Detalle de un proveedor."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Documentos de compra",
+      "item": [
+        {
+          "name": "Importar DTE (JSON)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/api/v1/purchase-documents/import",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "purchase-documents",
+                "import"
+              ]
+            },
+            "description": "Sube uno o varios JSON de DTE en el campo `files` (máx. 100 archivos, 1 MB cada uno). Importación parcial: responde 200 con el resultado de cada archivo.\n\nEn la pestaña Body, selecciona los archivos en la fila `files` (permite varios).",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "files",
+                  "type": "file",
+                  "src": [],
+                  "description": "Uno o varios archivos .json"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Listar documentos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/api/v1/purchase-documents?page=1&limit=10",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "purchase-documents"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Página",
+                  "disabled": false
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Elementos por página (máx. 100)",
+                  "disabled": false
+                },
+                {
+                  "key": "type",
+                  "value": "CREDITO_FISCAL",
+                  "description": "CREDITO_FISCAL o NOTA_CREDITO",
+                  "disabled": true
+                },
+                {
+                  "key": "supplierId",
+                  "value": "1",
+                  "description": "Id del proveedor",
+                  "disabled": true
+                },
+                {
+                  "key": "from",
+                  "value": "2026-10-01",
+                  "description": "Fecha de emisión inicial (YYYY-MM-DD)",
+                  "disabled": true
+                },
+                {
+                  "key": "to",
+                  "value": "2026-10-31",
+                  "description": "Fecha de emisión final (YYYY-MM-DD)",
+                  "disabled": true
+                },
+                {
+                  "key": "receiverNrc",
+                  "value": "1317457",
+                  "description": "NRC del receptor",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "active",
+                  "description": "active, voided o all (por defecto all)",
+                  "disabled": true
+                },
+                {
+                  "key": "withWarnings",
+                  "value": "true",
+                  "description": "Solo documentos con advertencias",
+                  "disabled": true
+                },
+                {
+                  "key": "pendingLink",
+                  "value": "true",
+                  "description": "Solo notas de crédito pendientes de vincular",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Listado paginado del más reciente al más antiguo. Activa los filtros que necesites."
+          },
+          "response": []
+        },
+        {
+          "name": "Obtener documento",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/api/v1/purchase-documents/:id",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "purchase-documents",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1",
+                  "description": "Id del documento de compra"
+                }
+              ]
+            },
+            "description": "Detalle con líneas (`items`), documentos relacionados y notas de crédito."
+          },
+          "response": []
+        },
+        {
+          "name": "Anular documento",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/api/v1/purchase-documents/:id/void",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "purchase-documents",
+                ":id",
+                "void"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1",
+                  "description": "Id del documento de compra"
+                }
+              ]
+            },
+            "description": "Saca el documento de los reportes. `reason` es obligatorio (máx. 500 caracteres). No anula nada en Hacienda.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Factura duplicada por el proveedor\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reactivar documento",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/api/v1/purchase-documents/:id/unvoid",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "purchase-documents",
+                ":id",
+                "unvoid"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1",
+                  "description": "Id del documento de compra"
+                }
+              ]
+            },
+            "description": "Reactiva un documento anulado. Sin body."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Reportes de compras",
+      "item": [
+        {
+          "name": "Resumen de IVA por mes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/api/v1/purchase-reports/iva-summary?year=2026",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "purchase-reports",
+                "iva-summary"
+              ],
+              "query": [
+                {
+                  "key": "year",
+                  "value": "2026",
+                  "description": "Año (por defecto el actual)",
+                  "disabled": false
+                },
+                {
+                  "key": "receiverNrc",
+                  "value": "1317457",
+                  "description": "NRC del receptor",
+                  "disabled": true
+                },
+                {
+                  "key": "supplierId",
+                  "value": "1",
+                  "description": "Solo las compras de ese proveedor (en cero si no compró)",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Los 12 meses del año: créditos fiscales, notas de crédito y neto (con `ivaCredit` = IVA + percepción)."
+          },
+          "response": []
+        },
+        {
+          "name": "Total de compras",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/api/v1/purchase-reports/summary?from=2026-10-01&to=2026-10-31",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "purchase-reports",
+                "summary"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "2026-10-01",
+                  "description": "Fecha inicial (YYYY-MM-DD)",
+                  "disabled": false
+                },
+                {
+                  "key": "to",
+                  "value": "2026-10-31",
+                  "description": "Fecha final (YYYY-MM-DD)",
+                  "disabled": false
+                },
+                {
+                  "key": "receiverNrc",
+                  "value": "1317457",
+                  "description": "NRC del receptor",
+                  "disabled": true
+                },
+                {
+                  "key": "supplierId",
+                  "value": "1",
+                  "description": "Solo las compras de ese proveedor (en cero si no compró)",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Totales en un rango. Sin fechas: el mes en curso."
+          },
+          "response": []
+        },
+        {
+          "name": "Compras por proveedor",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/api/v1/purchase-reports/by-supplier?from=2026-10-01&to=2026-10-31",
+              "host": [
+                "{{URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "purchase-reports",
+                "by-supplier"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "2026-10-01",
+                  "description": "Fecha inicial (YYYY-MM-DD)",
+                  "disabled": false
+                },
+                {
+                  "key": "to",
+                  "value": "2026-10-31",
+                  "description": "Fecha final (YYYY-MM-DD)",
+                  "disabled": false
+                },
+                {
+                  "key": "receiverNrc",
+                  "value": "1317457",
+                  "description": "NRC del receptor",
+                  "disabled": true
+                },
+                {
+                  "key": "supplierId",
+                  "value": "1",
+                  "description": "Solo las compras de ese proveedor (en cero si no compró)",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Totales netos por proveedor, de mayor a menor, con porcentaje del total. Sin fechas: el mes en curso."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

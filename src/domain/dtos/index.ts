@@ -17,3 +17,8 @@ export * from './auth/reset-password.dto';
 export * from './shared/pagination.dto';
 
 export * from './dashboard/sales-report.dto';
+
+export * from './purchase/purchase-document-filters.dto';
+export * from './purchase/void-purchase-document.dto';
+export * from './purchase/purchase-report.dto';
+export * from './purchase/purchase-product.dto';
